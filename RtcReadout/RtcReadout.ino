@@ -97,24 +97,25 @@ void RtcConvertDate(byte *time_raw, byte *time) {
     Assumes time[0]=sec, time[1]=min, 2=hrs, 3=days, 4=weekdays,5=months,6=yrs
     */
 
+    const unsigned int low_nibble = 0b00001111;
     // convert seconds
-    time[0] = (time_raw[0] >> 4)*10 + (time_raw[0] & 0b00001111);
+    time[0] = (time_raw[0] >> 4)*10 + (time_raw[0] & low_nibble);
 
     // convert minutes
-    time[1] = (time_raw[1] >> 4)*10 + (time_raw[1] & 0b00001111);
+    time[1] = (time_raw[1] >> 4)*10 + (time_raw[1] & low_nibble);
 
     // convert hours
-    time[2] = (time_raw[2] >> 4)*10 + (time_raw[2] & 0b00001111);
+    time[2] = (time_raw[2] >> 4)*10 + (time_raw[2] & low_nibble);
 
     // convert days
-    time[3] = (time_raw[3] >> 4)*10 + (time_raw[3] & 0b00001111);
+    time[3] = (time_raw[3] >> 4)*10 + (time_raw[3] & low_nibble);
 
     // no conversion needed for weekday
     time[4] = time_raw[4];      // Sunday is 0, monday is 1 etc.
 
     // convert months
-    time[5] = (time_raw[5] >> 4)*10 + (time_raw[5] & 0b00001111);
+    time[5] = (time_raw[5] >> 4)*10 + (time_raw[5] & low_nibble);
 
     //convert years
-    time[6] = (time_raw[6] >> 4)*10 + (time_raw[6] & 0b00001111);
+    time[6] = (time_raw[6] >> 4)*10 + (time_raw[6] & low_nibble);
 }
