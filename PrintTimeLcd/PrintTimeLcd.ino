@@ -23,7 +23,7 @@ void setup() {
     lcd.print("Time (24hrs)");
 
      // checking if RTC is good. (Must clear it's OS flag).
-    while(RtcCheckClock(RTC_ADDRESS)) {
+    while(rtcCheckClock(RTC_ADDRESS)) {
         Serial.println("Bad clock.");
     }
 }
@@ -32,7 +32,6 @@ void loop() {
     int status;
     unsigned int secs;
     static unsigned int lastsecs = 69;  // initializing to non-zero value
-    byte rtc_time_raw[7];
     byte rtc_time[7];
     char string[17];    // only 16 chars in each lcd row (+1 for null character)
 
@@ -47,11 +46,11 @@ void loop() {
         Wire.requestFrom(RTC_ADDRESS,7);        // Tell slave we need to read 7bytes begining at the current register
         int i = 0;
         while(Wire.available() != 0 && (i < 7)) {   // making sure that there are still bytes to read from I2C
-            rtc_time_raw[i] = Wire.read();          // read that byte into 'rtc_time_raw' array
+            rtc_time[i] = Wire.read();              // read that byte into 'rtc_time' array
             i++;
         }
         Wire.endTransmission();
-        RtcConvertDate(rtc_time_raw, rtc_time);
+        rtcConvertTime(rtc_time);
 
         // print to lcd
         sprintf(string, "%02d:%02d:%02d ", rtc_time[2], rtc_time[1], rtc_time[0]);
