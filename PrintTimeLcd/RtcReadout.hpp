@@ -36,7 +36,7 @@ void rtcGetTime(byte time[7], int rtc_address) {
         Outputs:
          - time is written with the retrieved date and time.
         Assumes:
-            time[0]=sec, time[1]=min, 2=hrs, 3=days, 4=weekdays,5=months,6=yrs
+            time[0]=sec, time[1]=min, 2=hrs, 3=days, 4=weekdays,5=months,6=yrs  (bascially little endian)
     */
 
     Wire.beginTransmission(rtc_address);    // Get the slave's attention, tell it we're sending a command byte

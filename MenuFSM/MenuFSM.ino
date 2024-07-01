@@ -16,7 +16,7 @@ typedef enum {start, gps, local_time, date, lat, lon, digit_selector} FSM_State;
 FSM_State current_state = start;
 FSM_State next_state = start;
 
-float latitude = -33.832;       // might make double in future (since trig functions use double)
+float latitude = 33.832;       // might make double in future (since trig functions use double)
 float longitude = 151.124;
 
 void setup() {
@@ -78,7 +78,6 @@ void loop() {
                 case select: {
                     next_state = digit_selector;
                     digit_format = 2;
-                    lcd.clear();
                 } break;
                 case back: {
                     next_state = start;
@@ -95,7 +94,6 @@ void loop() {
                 case select: {
                     next_state = digit_selector;
                     digit_format = 3;
-                    lcd.clear();
                 } break;
                 case back: {
                     next_state = start;
@@ -112,7 +110,6 @@ void loop() {
                 case select: {
                     next_state = digit_selector;
                     digit_format = 0;
-                    lcd.clear();
                 } break;
                 case back: {
                     next_state = gps;
@@ -129,7 +126,6 @@ void loop() {
                 case select: {
                     next_state = digit_selector;
                     digit_format = 1;
-                    lcd.clear();
                 } break;
                 case back: {
                     next_state = gps;
@@ -212,7 +208,12 @@ void loop() {
         case lat: {
             lcd.home();
             lcd.write("Latitude");
+            // must print + character for latitude sepparately since this is not handled by lcd.print().
             lcd.setCursor(0,1); // second row
+            if(latitude > 0) {
+                lcd.write('+');
+                lcd.setCursor(1,1);
+            }
             lcd.print(latitude, DEC);
         } break;
         case lon: {
@@ -223,7 +224,6 @@ void loop() {
         } break;
         case digit_selector: {
             lcd.home();
-            lcd.write("digit_selector");
             digitSelector(digit_format);
         }
     }
@@ -231,23 +231,101 @@ void loop() {
 
 
 void digitSelector(byte digit_format) {
+    char digits[8];
 
-    // all of this needs to be encapsulated within a for loop
+    // read all characters on bottom row of LCD into array.
+    readLcdDigits(digits);
+    for(int i=0; i<8;i++) {Serial.print(digits[i]);}
+    lcd.setCursor(0,1); // start of second row
+    lcd.blink();    // blink the cursor.
+
+    // all of this needs to be encapsulated within a loop
         // this is because the digitSelector() is its own nested FSM.
         // do not exit digitSelector() until digit selection is done.
+    byte col = 0;
+    byte condition = 1;
+    while(condition) {
+        // skip these characters
+        if( (digits[col]=='/') || (digits[col]=='.') || (digits[col]==':') ) {
+            col++;
+            lcd.setCursor(col,1);
+            continue;
+        }
+        // get which button was pressed.
+        Button button = readButtons();
 
-    // for each digit_format case
-        // read all current digits on bottom row.
-        // store each digit into an array (this is essentially BCD encoding)
-    // turn on blinking cursor
-    // for each digit:
-        // if cycle {increment digit and display}
-        // if select {move to next digit} (basically continue;)
-        // if back {exit digitSelector()}
-    // once last digit selected (above for loop done)
-    // turn off blinking cursor
+        // edit the digits array
+        switch(button) {
+            case cycle: {
+                 // alternate the sign bit if there is one.
+                if(digits[col] == '+') {
+                    digits[col] = '-';
+                }
+                else if(digits[col] == '-') {
+                    digits[col] = '+';
+                }
+                else if(digits[col]=='9') { // wrap around back to '0'
+                    digits[col] = '0';
+                }
+                else {
+                    (digits[col])++;     // increment to the next ASCII character.
+                }
+                lcd.write(digits[col]);     // this auto-increments the cursor position
+                lcd.setCursor(col,1);       // must set cursor back
+            } break;
+            case select: {
+                Serial.println("In select.");
+                col++;  // move to next character
+                lcd.setCursor(col, 1);
+                if(col > 7) {   // check if we are done.
+                    condition = 0;  // stop the while loop
+                    continue;       // prevent the next line from executing.
+                }
+            } break;
+            case back: return;  // exit the digitSelector();
+        }
+        // print to LCD the new character (cursor should already
+        // be in correct position)
+        // lcd.write(digits[col]);
+    }
+    // last digit has been selected.
+    // therefore, turn off blinking cursor.
+    lcd.noBlink();
     // convert the BCD digit array into whatever format we need
         // if lat or lon {convert to float}
         // if date or time {convert to integers} the RtcReadout.hpp time format
+}
+
+void readLcdDigits(char digits[8]) {
+    /* 
+    A function that is only used internally by digitSelector(). It reads chars
+    on bottom row of LCD and stores them in an array.
+
+    Assumes:
+        - LCD has already been initiallised.
+        - Only reads bottom row of 2x16 LCD.
+    */
+
+    //int i = 0;  // actual digit place (0s 10s 100s ss mm hh etc.) (different to char position).
+    byte c;
+    for(int col=0; col<8; col++) {
+        lcd.setCursor(col, 1);
+        c = lcd.read();
+        digits[col] = c;  // dont convert from ASCII to integers yet. 
+        /*
+        // this is useful for converion from ascii to BCD encoding
+        if( (c=='-') || (c=='+') ) {  // leave the sign character '+' or '-' in digits[i]
+            digits[i] = c;
+            i++;
+            continue;
+        }
+        c = c - '0'; // converting from ASCII to integer value
+        if( (c <= 9) && (c >= 0) ) {    // ignores ',' '.' '/' '-' and other characters.
+            digits[i] = c;              // all '0' '1' '2' etc. ASCII characters should return 0-9 value when '0' character is subtracted from them.
+            i++;
+        }
+        if(i > 5) break; // don't try to write too many values to an array with only 6 elements.
+        */
+    }
 }
 
