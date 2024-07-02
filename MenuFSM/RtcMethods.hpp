@@ -90,33 +90,64 @@ void rtcConvertTime(byte *time) {
     time[6] = (time[6] >> 4)*10 + (time[6] & low_nibble);
 }
 
-void rtcWriteTime(byte time[7], int rtc_address) {
+void rtcWriteTime(byte time[3], int rtc_address) {
     /* 
-    Writes the local time (ss:mm:hh) and date (dd/mm/yy) to an RTC on the
+    Writes the local time (ss:mm:hh)  to an RTC on the
     PCF8523 chip. Using I2C.
 
     Inputs:
-     - 7 element byte array. 
+     - 3 element byte array. 
      - the I2C address for the Real Time Clock(RTC).
      Assumes:
-        time[0]=sec, time[1]=min, 2=hrs, 3=days, 4=weekdays,5=months,6=yrs  (bascially little endian)
+         - time[0]=sec, time[1]=min, 2=hrs  (bascially little endian)
          - Already joined I2C bus as master.  Wire.begin(); is done.
     */
 
-    byte bcd[7];
+    byte bcd[3];
 
     // must convert each element of time[] into BCD encoding.
-    for(byte i=0; i<7; i++) {   // for each time[i]
+    for(byte i=0; i<3; i++) {   // for each time[i]
         bcd[i] = ((time[i] / 10) << 4) + (time[i] % 10);
     }
 
     // write the bcd array to RTC chip.
     Wire.beginTransmission(rtc_address);
     Wire.write(0x3);    // set to seconds register.
-    for(byte i=0; i<7; i++) {
+    for(byte i=0; i<3; i++) {
         Wire.write(bcd[i]);
     }
     Wire.endTransmission();
+}
+
+void rtcWriteDate(byte time[3], int rtc_address) {
+    /* 
+    Writes the date (dd/mm/yy) to an RTC on the
+    PCF8523 chip. Using I2C.
+
+    Inputs:
+     - 3 element byte array. 
+     - the I2C address for the Real Time Clock(RTC).
+     Assumes:
+         - time[0]=day, time[1]=month, 2=year  (bascially little endian)
+         - Already joined I2C bus as master.  Wire.begin(); is done.
+    */
+
+    byte bcd[3];
+
+    // must convert each element of time[] into BCD encoding.
+    for(byte i=0; i<3; i++) {   // for each time[i]
+        bcd[i] = ((time[i] / 10) << 4) + (time[i] % 10);
+    }
+    
+    // write the bcd array to RTC chip.
+    Wire.beginTransmission(rtc_address);
+    Wire.write(0x6);    // set to days register
+    Wire.write(bcd[0]); // write in day number
+    Wire.endTransmission();
+    Wire.beginTransmission(rtc_address);
+    Wire.write(0x8);    // set to months register   (must skip weekdays register)
+    Wire.write(bcd[1]);     // write in month number
+    Wire.write(bcd[2]);     // write in year number
 }
 
 #endif

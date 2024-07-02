@@ -178,6 +178,7 @@ void loop() {
         case lat: {
             lcd.home();
             lcd.write("Latitude");
+            // right now latitude is not being printed with the correct formatting. There are no zeros padding the front.
             char str[8];
             dtostrf(latitude, 7, 3, str);
             if(latitude > 0) {  // must add in '+' sepparately.
@@ -189,6 +190,7 @@ void loop() {
         case lon: {
             lcd.home();
             lcd.write("Longitude");
+            // right now longitude is not being printed with the correct formatting. There are no zeros padding the front.
             lcd.setCursor(0,1); // second row
             lcd.print(longitude, DEC);
         } break;
@@ -281,7 +283,7 @@ void digitSelector(byte digit_format) {
     // last digit has been selected.
     // therefore, turn off blinking cursor.
     lcd.noBlink();
-
+    
     // convert the BCD digit array into whatever format we need
         // if lat or lon {convert to float}
         // if date or time {convert to integers} the RtcReadout.hpp time format
@@ -292,10 +294,13 @@ void digitSelector(byte digit_format) {
         longitude = atof(digits);
     }
     else if(digit_format==2) {  // local time
-
+        byte time[3];
+        // convert from digits[] to time[]
+        //convertDigitsToTime();
+        rtcWriteTime(digits, RTC_ADDRESS)
     }
     else if(digit_format==3) {  // date
-
+        rtcWriteDate(digits, RTC_ADDRESS)
     }
     return;
 }
@@ -338,7 +343,7 @@ byte getMaxDigitCol(byte digit_format) {
     /*
     Function that returns the number of columns to be able to select digits for
     depending on the digit_format.
-    In simpler terms; it returns the number of characters  on the bottom row 
+    In simpler terms; it returns the number of characters on the bottom row 
     that can be edited for that digit_format.
     */
     if((digit_format==0) || (digit_format==1)) {   // latitude or longitude

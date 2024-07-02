@@ -40,7 +40,7 @@ void setup() {
     }
 
     // writing a new time to the rtc
-    //byte time[7] = {00, 10, 16, 02, 2, 07, 24};
+    //byte time[7] = {30, 12, 18, 02, 2, 07, 24};
     //rtcWriteTime(time, RTC_ADDRESS);
 }
 
