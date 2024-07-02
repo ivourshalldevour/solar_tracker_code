@@ -59,10 +59,12 @@ void rtcConvertTime(byte *time) {
     Input:  pointer to a 7 element byte (a.k.a. unit8_t) array    in BCD
     Output: edits that array directly.
 
-    Assumes rtc's OS flag is cleared. (therefore RTC clock integrity is guaranteed).
+    Assumes:
+     - rtc's OS flag is cleared. (therefore RTC clock integrity is guaranteed).
         Call rtcCheckClock() to clear this flag.
-    Assumes hours are in 24hour format (can be changed in PCF8523 chip)
-    Assumes time[0]=sec, time[1]=min, 2=hrs, 3=days, 4=weekdays,5=months,6=yrs
+     - hours are in 24hour format (can be changed in PCF8523 chip)
+     - time[0]=sec, time[1]=min, 2=hrs, 3=days, 4=weekdays,5=months,6=yrs
+     - for weekdays (sunday is 0, monday is 1, etc.)
     */
 
     const unsigned int low_nibble = 0b00001111;
@@ -86,6 +88,35 @@ void rtcConvertTime(byte *time) {
 
     //convert years
     time[6] = (time[6] >> 4)*10 + (time[6] & low_nibble);
+}
+
+void rtcWriteTime(byte time[7], int rtc_address) {
+    /* 
+    Writes the local time (ss:mm:hh) and date (dd/mm/yy) to an RTC on the
+    PCF8523 chip. Using I2C.
+
+    Inputs:
+     - 7 element byte array. 
+     - the I2C address for the Real Time Clock(RTC).
+     Assumes:
+        time[0]=sec, time[1]=min, 2=hrs, 3=days, 4=weekdays,5=months,6=yrs  (bascially little endian)
+         - Already joined I2C bus as master.  Wire.begin(); is done.
+    */
+
+    byte bcd[7];
+
+    // must convert each element of time[] into BCD encoding.
+    for(byte i=0; i<7; i++) {   // for each time[i]
+        bcd[i] = ((time[i] / 10) << 4) + (time[i] % 10);
+    }
+
+    // write the bcd array to RTC chip.
+    Wire.beginTransmission(rtc_address);
+    Wire.write(0x3);    // set to seconds register.
+    for(byte i=0; i<7; i++) {
+        Wire.write(bcd[i]);
+    }
+    Wire.endTransmission();
 }
 
 #endif

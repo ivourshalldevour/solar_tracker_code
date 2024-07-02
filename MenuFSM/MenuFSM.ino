@@ -3,7 +3,7 @@
 #include <hd44780ioClass/hd44780_I2Cexp.h> // i2c expander i/o class header
 
 #include "ButtonInput.hpp"  // uses CSB buttons
-#include "RtcReadout.hpp"
+#include "RtcMethods.hpp"
 
 #define LCD_COLS 16
 #define LCD_ROWS 2
@@ -132,45 +132,15 @@ void loop() {
                     lcd.clear();
                 }
             }
-            break;
-        case digit_selector:
-            switch(button) {
-                // cycle is handled by digitSelector() in output logic.
-                // select is handled by digitSelector() in output logic.
-                case back: {
-                    // next state depends on from where digit_selector was entered.
-                    // must check digit_format to know previous state.
-                    if(digit_format == 0) {
-                        next_state = lat;
-                        lcd.clear();
-                    }
-                    else if(digit_format == 1) {
-                        next_state = lon;
-                        lcd.clear();
-                    }
-                    else if(digit_format == 2) {
-                        next_state = local_time;
-                        lcd.clear();
-                    }
-                    else if(digit_format == 3) {      // technically doesn't need to be else if() could just be else
-                        next_state = date;
-                        lcd.clear();
-                    }
-                    else {
-                        lcd.clear();
-                        lcd.print("Inval digi_forma");
-                    }
-                }
-            }
+        // digit_selector case is actually handled in output logic.
     }
     current_state = next_state; 
     // end of next state logic
 
-    
     // output logic
     switch(current_state) {
         case start: {
-            lcd.home();
+            lcd.home();     // these homing lines are required because the LCD is constantly being bombarded with write commands. Even when no state change occurs or no buttons are pressed.
             lcd.write("Main Menu");
         } break;
         case gps: {
@@ -200,7 +170,7 @@ void loop() {
             rtcConvertTime(time);
             char str[9];
             // if this sprintf() function uses too much memory. I could use several sepparate lcd.print(time[i], DEC) functions. And lcd.print("/") in between.
-            // however, then ii won't be able to pad with zeros. sprintf() can pad with zeros.
+            // however, then i won't be able to pad with zeros. sprintf() can pad with zeros.
             sprintf(str, "%02d/%02d/%02d", time[3], time[5], time[6]);   //   time[0]=sec, time[1]=min, 2=hrs, 3=days, 4=weekdays,5=months,6=yrs
             lcd.setCursor(0,1); // second row
             lcd.write(str);
@@ -208,13 +178,13 @@ void loop() {
         case lat: {
             lcd.home();
             lcd.write("Latitude");
-            // must print + character for latitude sepparately since this is not handled by lcd.print().
-            lcd.setCursor(0,1); // second row
-            if(latitude > 0) {
-                lcd.write('+');
-                lcd.setCursor(1,1);
+            char str[8];
+            dtostrf(latitude, 7, 3, str);
+            if(latitude > 0) {  // must add in '+' sepparately.
+                str[0] = '+';
             }
-            lcd.print(latitude, DEC);
+            lcd.setCursor(0,1); // second row
+            lcd.write(str);
         } break;
         case lon: {
             lcd.home();
@@ -223,19 +193,39 @@ void loop() {
             lcd.print(longitude, DEC);
         } break;
         case digit_selector: {
-            lcd.home();
             digitSelector(digit_format);
+            // next state depends on from where digit_selector was entered.
+            // must check digit_format to know previous state.
+            if(digit_format == 0) {
+                next_state = lat;
+                lcd.clear();
+            }
+            else if(digit_format == 1) {
+                next_state = lon;
+                lcd.clear();
+            }
+            else if(digit_format == 2) {
+                next_state = local_time;
+                lcd.clear();
+            }
+            else if(digit_format == 3) {      // technically doesn't need to be else if() could just be else
+                next_state = date;
+                lcd.clear();
+            }
+            else {
+                lcd.clear();
+                lcd.print("Inval digi_forma");
+            }
         }
     }
 }
 
 
 void digitSelector(byte digit_format) {
-    char digits[8];
+    char digits[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-    // read all characters on bottom row of LCD into array.
-    readLcdDigits(digits);
-    for(int i=0; i<8;i++) {Serial.print(digits[i]);}
+    // read characters on bottom row of LCD into array.
+    readLcdDigits(digits, digit_format);
     lcd.setCursor(0,1); // start of second row
     lcd.blink();    // blink the cursor.
 
@@ -257,8 +247,10 @@ void digitSelector(byte digit_format) {
         // edit the digits array
         switch(button) {
             case cycle: {
-                 // alternate the sign bit if there is one.
-                if(digits[col] == '+') {
+                if (digits[col] == ' ') {   // if there is padding space, change to zero.
+                    digits[col] = '0';
+                }
+                else if(digits[col] == '+') { // alternate the sign bit if there is one.
                     digits[col] = '-';
                 }
                 else if(digits[col] == '-') {
@@ -274,29 +266,41 @@ void digitSelector(byte digit_format) {
                 lcd.setCursor(col,1);       // must set cursor back
             } break;
             case select: {
-                Serial.println("In select.");
                 col++;  // move to next character
                 lcd.setCursor(col, 1);
-                if(col > 7) {   // check if we are done.
+                if( !(col < getMaxDigitCol(digit_format)) ) {   // check if we are done.
                     condition = 0;  // stop the while loop
-                    continue;       // prevent the next line from executing.
                 }
             } break;
-            case back: return;  // exit the digitSelector();
+            case back: {
+                lcd.noBlink();
+                return;  // exit the digitSelector();
+            }
         }
-        // print to LCD the new character (cursor should already
-        // be in correct position)
-        // lcd.write(digits[col]);
     }
     // last digit has been selected.
     // therefore, turn off blinking cursor.
     lcd.noBlink();
+
     // convert the BCD digit array into whatever format we need
         // if lat or lon {convert to float}
         // if date or time {convert to integers} the RtcReadout.hpp time format
+    if(digit_format==0) {   // latitude
+        latitude = atof(digits);
+    }
+    else if(digit_format==1) {  // longitude
+        longitude = atof(digits);
+    }
+    else if(digit_format==2) {  // local time
+
+    }
+    else if(digit_format==3) {  // date
+
+    }
+    return;
 }
 
-void readLcdDigits(char digits[8]) {
+void readLcdDigits(char digits[8], byte digit_format) {
     /* 
     A function that is only used internally by digitSelector(). It reads chars
     on bottom row of LCD and stores them in an array.
@@ -308,7 +312,8 @@ void readLcdDigits(char digits[8]) {
 
     //int i = 0;  // actual digit place (0s 10s 100s ss mm hh etc.) (different to char position).
     byte c;
-    for(int col=0; col<8; col++) {
+    byte max_col = getMaxDigitCol(digit_format);
+    for(byte col=0; col<max_col; col++) {
         lcd.setCursor(col, 1);
         c = lcd.read();
         digits[col] = c;  // dont convert from ASCII to integers yet. 
@@ -327,5 +332,18 @@ void readLcdDigits(char digits[8]) {
         if(i > 5) break; // don't try to write too many values to an array with only 6 elements.
         */
     }
+}
+
+byte getMaxDigitCol(byte digit_format) {
+    /*
+    Function that returns the number of columns to be able to select digits for
+    depending on the digit_format.
+    In simpler terms; it returns the number of characters  on the bottom row 
+    that can be edited for that digit_format.
+    */
+    if((digit_format==0) || (digit_format==1)) {   // latitude or longitude
+        return 7;
+    }
+    else return 8;  // date or local time.
 }
 
