@@ -16,8 +16,9 @@ typedef enum {start, gps, local_time, date, lat, lon, digit_selector} FSM_State;
 FSM_State current_state = start;
 FSM_State next_state = start;
 
-float latitude = 33.832;       // might make double in future (since trig functions use double)
+float latitude = -33.832;       // might make double in future (since trig functions use double)
 float longitude = 151.124;
+
 
 void setup() {
     int status;
@@ -30,6 +31,7 @@ void setup() {
         hd44780::fatalError(status);
     } // if there was an error, blink the lcd backlight.
 }
+
 
 void loop() {
     // used for the digitSelector() function to know how to print to lcd.
@@ -168,21 +170,18 @@ void loop() {
         case lat: {
             lcd.home();
             lcd.write("Latitude");
-            // right now latitude is not being printed with the correct formatting. There are no zeros padding the front.
+            lcd.setCursor(0,1);
             char str[8];
-            dtostrf(latitude, 7, 3, str);
-            if(latitude > 0) {  // must add in '+' sepparately.
-                str[0] = '+';
-            }
-            lcd.setCursor(0,1); // second row
+            floatToLcd(latitude, str, 0);    // 0 for latitude
             lcd.write(str);
         } break;
         case lon: {
             lcd.home();
             lcd.write("Longitude");
-            // right now longitude is not being printed with the correct formatting. There are no zeros padding the front.
             lcd.setCursor(0,1); // second row
-            lcd.print(longitude, DEC);
+            char str[8];
+            floatToLcd(longitude, str, 1);    // 1 for longitude
+            lcd.write(str);
         } break;
         case digit_selector: {
             digitSelector(digit_format);
@@ -296,6 +295,7 @@ void digitSelector(byte digit_format) {
     return;
 }
 
+
 void readLcdDigits(char digits[8], byte digit_format) {
     /* 
     A function that is only used internally by digitSelector(). It reads chars
@@ -330,6 +330,7 @@ void readLcdDigits(char digits[8], byte digit_format) {
     }
 }
 
+
 byte getMaxDigitCol(byte digit_format) {
     /*
     Function that returns the number of columns to be able to select digits for
@@ -342,6 +343,7 @@ byte getMaxDigitCol(byte digit_format) {
     }
     else return 8;  // date or local time.
 }
+
 
 void menuPrintTime(byte time[7], byte format) {
     /*
@@ -384,6 +386,7 @@ void menuPrintTime(byte time[7], byte format) {
     }
 }
 
+
 void convertDigitsToTime(byte time[3], byte digits[8], byte format) {
     /*
     A function that converts the ASCII digits on an LCD to the BCD format
@@ -416,5 +419,84 @@ void convertDigitsToTime(byte time[3], byte digits[8], byte format) {
         i = i + 3;  // this skips the '/' and ':' characters.
     }
     return;
+}
+
+
+char* floatToLcd(float x, char p[8], byte format) {
+    /*
+    Only to be used to convert lat or lon floats to string. Got this function
+    off stack overflow. I modified it so that it adds zeros at front for
+    padding and only displays 3 decimal places. The + and - signs are also
+    only added if latitude is being input.
+
+    Inputs:
+        - x is the float number to convert.
+        - p is the char[] array into which the string will go.
+        - if format=0 will produce string in latitude format (with +/- sign)
+        - if format=1 will produce string in longitude format (no sign at front).
+    Assumes:
+        - p is uninitialised.
+        - p is 8 elements in size.
+    */
+
+    p[7] = 0;   // add null character at end
+    uint32_t decimals;  // store the fractional part of x
+    uint16_t units;      // store the integers part of x
+    if(x < 0) {     // take care of negative numbers
+        decimals = (int)(x * -1000) % 1000; // make 100 for 2 decimals etc.
+        units = (int)(-1 * x);
+    } else {    // positive numbers
+        decimals = (int)(x * 1000) % 1000;
+        units = (int)x;
+    }
+
+    p[6] = (decimals % 10) + '0';
+    decimals /= 10;
+    p[5] = (decimals % 10) + '0';
+    decimals /= 10;
+    p[4] = (decimals % 10) + '0';
+    p[3] = '.';
+    if(!format) {    // if in latitude format
+        p[2] = (units % 10) + '0';
+        units /= 10;
+        p[1] = (units % 10) + '0';
+        if(x < 0) p[0] = '-';
+        else p[0] = '+';
+    }
+    else {      // in longitude mode.
+        p[2] = (units % 10) + '0';
+        units /= 10;
+        p[1] = (units % 10) + '0';
+        units /= 10;
+        p[0] = (units % 10) + '0';
+    }
+
+    /*  // the stack overflow code
+    char *s = p + 8; // go to end of buffer     (buffer is 8 elements in size)
+    uint16_t decimals;  // variable to store the decimals
+    int units;  // variable to store the units (part to left of decimal place)
+    if(x < 0) { // take care of negative numbers
+        decimals = (int)(x * -1000) % 1000; // make 100 for 2 decimals etc.
+        units = (int)(-1 * x);
+    } else { // positive numbers
+        decimals = (int)(x * 1000) % 1000;
+        units = (int)x;
+    }
+
+    // repeat for as many decimal places as you need
+    *--s = (decimals % 10) + '0';
+    decimals /= 10;                 // only 3 decimals places needed
+    *--s = (decimals % 10) + '0';
+    decimals /= 10;
+    *--s = (decimals % 10) + '0';
+    *--s = '.';     // add decimal point
+
+    while(units > 0) {
+        *--s = (units % 10) + '0';
+        units /= 10;
+    }
+    if(x < 0) *--s = '-';   // - sign for negative numbers.
+    return s;     // might not need this
+    */
 }
 

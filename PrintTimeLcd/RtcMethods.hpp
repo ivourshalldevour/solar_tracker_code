@@ -3,7 +3,7 @@
 
 #define RTC_ADDRESS 0b1101000   // for PCF8523 chip
 
-byte rtcCheckClock(byte address) {
+byte rtcCheckClock(int address) {
     // Assumes the PCF8523 chip is being used.
     // returns 1 if the OS flag is set. Therefore clock integrity cannot be guaranteed.
         // also attempts to clear the flag if this is the case
@@ -67,7 +67,7 @@ void rtcConvertTime(byte *time) {
      - for weekdays (sunday is 0, monday is 1, etc.)
     */
 
-    const unsigned int low_nibble = 0b00001111;     // maybe change to byte (doesnt have to be const)
+    byte low_nibble = 0b00001111;     // maybe change to byte (doesnt have to be const)
     // convert seconds
     time[0] = (time[0] >> 4)*10 + (time[0] & low_nibble);
 
