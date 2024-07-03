@@ -3,7 +3,7 @@
 
 #define RTC_ADDRESS 0b1101000   // for PCF8523 chip
 
-byte rtcCheckClock(int address) {
+byte rtcCheckClock(byte address) {
     // Assumes the PCF8523 chip is being used.
     // returns 1 if the OS flag is set. Therefore clock integrity cannot be guaranteed.
         // also attempts to clear the flag if this is the case
@@ -67,7 +67,7 @@ void rtcConvertTime(byte *time) {
      - for weekdays (sunday is 0, monday is 1, etc.)
     */
 
-    const unsigned int low_nibble = 0b00001111;
+    const unsigned int low_nibble = 0b00001111;     // maybe change to byte (doesnt have to be const)
     // convert seconds
     time[0] = (time[0] >> 4)*10 + (time[0] & low_nibble);
 
@@ -96,25 +96,19 @@ void rtcWriteTime(byte time[3], int rtc_address) {
     PCF8523 chip. Using I2C.
 
     Inputs:
-     - 3 element byte array. 
+     - 3 element byte array (time[]) in BCD encoding
      - the I2C address for the Real Time Clock(RTC).
      Assumes:
+         - each time[] element is in BCD encoding.
          - time[0]=sec, time[1]=min, 2=hrs  (bascially little endian)
          - Already joined I2C bus as master.  Wire.begin(); is done.
     */
-
-    byte bcd[3];
-
-    // must convert each element of time[] into BCD encoding.
-    for(byte i=0; i<3; i++) {   // for each time[i]
-        bcd[i] = ((time[i] / 10) << 4) + (time[i] % 10);
-    }
 
     // write the bcd array to RTC chip.
     Wire.beginTransmission(rtc_address);
     Wire.write(0x3);    // set to seconds register.
     for(byte i=0; i<3; i++) {
-        Wire.write(bcd[i]);
+        Wire.write(time[i]);
     }
     Wire.endTransmission();
 }
@@ -125,29 +119,23 @@ void rtcWriteDate(byte time[3], int rtc_address) {
     PCF8523 chip. Using I2C.
 
     Inputs:
-     - 3 element byte array. 
+     - 3 element byte array (time[]) in BCD encoding.
      - the I2C address for the Real Time Clock(RTC).
      Assumes:
+         - each time[] element is in BCD encoding.
          - time[0]=day, time[1]=month, 2=year  (bascially little endian)
          - Already joined I2C bus as master.  Wire.begin(); is done.
     */
-
-    byte bcd[3];
-
-    // must convert each element of time[] into BCD encoding.
-    for(byte i=0; i<3; i++) {   // for each time[i]
-        bcd[i] = ((time[i] / 10) << 4) + (time[i] % 10);
-    }
     
     // write the bcd array to RTC chip.
     Wire.beginTransmission(rtc_address);
     Wire.write(0x6);    // set to days register
-    Wire.write(bcd[0]); // write in day number
+    Wire.write(time[0]); // write in day number
     Wire.endTransmission();
     Wire.beginTransmission(rtc_address);
     Wire.write(0x8);    // set to months register   (must skip weekdays register)
-    Wire.write(bcd[1]);     // write in month number
-    Wire.write(bcd[2]);     // write in year number
+    Wire.write(time[1]);     // write in month number
+    Wire.write(time[2]);     // write in year number
 }
 
 #endif

@@ -155,11 +155,7 @@ void loop() {
             // or could just display time once, at entry to this state.
             byte time[7];
             rtcGetTime(time, RTC_ADDRESS);
-            rtcConvertTime(time);
-            char str[9];
-            sprintf(str, "%02d:%02d:%02d", time[2], time[1], time[0]);  //   time[0]=sec, time[1]=min, 2=hrs, 3=days, 4=weekdays,5=months,6=yrs
-            lcd.setCursor(0,1); // second row
-            lcd.write(str);
+            menuPrintTime(time, 0); // 0 for printing local time. 
         } break;
         case date: {
             lcd.home();
@@ -167,13 +163,7 @@ void loop() {
             // get date and print it on second row
             byte time[7];
             rtcGetTime(time, RTC_ADDRESS);
-            rtcConvertTime(time);
-            char str[9];
-            // if this sprintf() function uses too much memory. I could use several sepparate lcd.print(time[i], DEC) functions. And lcd.print("/") in between.
-            // however, then i won't be able to pad with zeros. sprintf() can pad with zeros.
-            sprintf(str, "%02d/%02d/%02d", time[3], time[5], time[6]);   //   time[0]=sec, time[1]=min, 2=hrs, 3=days, 4=weekdays,5=months,6=yrs
-            lcd.setCursor(0,1); // second row
-            lcd.write(str);
+            menuPrintTime(time, 1); // 1 for printing date.
         } break;
         case lat: {
             lcd.home();
@@ -216,7 +206,7 @@ void loop() {
             }
             else {
                 lcd.clear();
-                lcd.print("Inval digi_forma");
+                lcd.write("Inval digi_forma");
             }
         }
     }
@@ -288,19 +278,20 @@ void digitSelector(byte digit_format) {
         // if lat or lon {convert to float}
         // if date or time {convert to integers} the RtcReadout.hpp time format
     if(digit_format==0) {   // latitude
-        latitude = atof(digits);
+        latitude = atof(digits);    // in future, store in EEPROM.
     }
     else if(digit_format==1) {  // longitude
-        longitude = atof(digits);
+        longitude = atof(digits);   // in future, store in EEPROM.
     }
     else if(digit_format==2) {  // local time
         byte time[3];
-        // convert from digits[] to time[]
-        //convertDigitsToTime();
-        rtcWriteTime(digits, RTC_ADDRESS)
+        convertDigitsToTime(time, digits, 0);   // 0 for local time
+        rtcWriteTime(time, RTC_ADDRESS);
     }
     else if(digit_format==3) {  // date
-        rtcWriteDate(digits, RTC_ADDRESS)
+        byte time[3];
+        convertDigitsToTime(time, digits, 1);   // 1 for date.
+        rtcWriteDate(time, RTC_ADDRESS);
     }
     return;
 }
@@ -350,5 +341,80 @@ byte getMaxDigitCol(byte digit_format) {
         return 7;
     }
     else return 8;  // date or local time.
+}
+
+void menuPrintTime(byte time[7], byte format) {
+    /*
+    Prints to the HD44780 LCD with I2C. Uses time values encoded in BCD format
+    directly as read from the RTC.
+    Inputs:
+        - format=0  print local time and add in ':' characters.
+        - format=1  print date and add in '/' characters.
+    Assumes:
+        - prints on second row only.
+    */
+    lcd.setCursor(0,1); // second row
+    
+    byte upper_nibble = 0b11110000;
+    byte lower_nibble = 0b00001111;
+
+    if(format) {  // if format == 1   print date
+        lcd.write(((time[3] & upper_nibble) >> 4) + '0');   // printing days
+        lcd.write((time[3] & lower_nibble) + '0');
+        lcd.write('/');
+
+        lcd.write(((time[5] & upper_nibble) >> 4) + '0');  // printing month
+        lcd.write((time[5] & lower_nibble) + '0');
+        lcd.write('/');
+
+        lcd.write(((time[6] & upper_nibble) >> 4) + '0');  // printing year
+        lcd.write((time[6] & lower_nibble) + '0');
+    }
+    else {  // else format is 0, so print local time.
+        lcd.write(((time[2] & upper_nibble) >> 4) + '0');   // printing hours
+        lcd.write((time[2] & lower_nibble) + '0');
+        lcd.write(':');
+
+        lcd.write(((time[1] & upper_nibble) >> 4) + '0');  // printing minutes
+        lcd.write((time[1] & lower_nibble) + '0');
+        lcd.write(':');
+
+        lcd.write(((time[0] & upper_nibble) >> 4) + '0');  // printing seconds      bitmask can be 0b01110000 to avoid reading OS flag
+        lcd.write((time[0] & lower_nibble) + '0');
+    }
+}
+
+void convertDigitsToTime(byte time[3], byte digits[8], byte format) {
+    /*
+    A function that converts the ASCII digits on an LCD to the BCD format
+    required by the RTC.
+    Inputs:
+        - time[3]   an array that will be passed to the rtcWriteTime() function.
+        - digits[8] the ASCII characters that are currently displayed on the LCD.
+        - format    0 if converting local time, 1 if converting date.
+    */
+    byte i = 0; // index digits[]
+    byte j;     // index time[]
+
+    if(format) j = 0;   // converting date
+    else       j = 2;   // converting local time
+
+    /*
+    Need to flip direction in which time[] is filled in depending on
+    whether date or local time is being converted. This is because in ASCII
+    format date is (basically) little endian (dd/mm/yy), while local time is
+    big endian (hh:mm:ss). time[] must be in little endian in the real time
+    clock's BCD format. So we have to reverse the direction in which time[] is
+    indexed.This is why j is either decremented or incremented. The digits[]
+    are always read from left to right. (in increasing order of addresses).
+    */
+
+    while(i < 7) {
+        time[j] = ((digits[i] - '0') << 4) + (digits[i+1] - '0');
+        if(format) j++; // converting date
+        else       j--; // converting local time.
+        i = i + 3;  // this skips the '/' and ':' characters.
+    }
+    return;
 }
 
