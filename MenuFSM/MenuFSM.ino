@@ -1,12 +1,15 @@
 #include <Wire.h>
 #include <hd44780.h>                       // main hd44780 header
 #include <hd44780ioClass/hd44780_I2Cexp.h> // i2c expander i/o class header
+#include <EEPROM.h>
 
 #include "ButtonInput.hpp"  // uses CSB buttons
 #include "RtcMethods.hpp"
 
 #define LCD_COLS 16
 #define LCD_ROWS 2
+#define LAT_EEPROM_ADDRESS 0    // spaced by 4 bytes since latitude and longitude are
+#define LON_EEPROM_ADDRESS 4    // floats which take up 4bytes each.
 
 hd44780_I2Cexp lcd(0x27); // declare lcd object: auto locate & auto config expander chip
     // we don't give it a specific I2C address because the library auto finds it.
@@ -16,8 +19,8 @@ typedef enum {start, gps, local_time, date, lat, lon, digit_selector} FSM_State;
 FSM_State current_state = start;
 FSM_State next_state = start;
 
-float latitude = -33.832;       // might make double in future (since trig functions use double)
-float longitude = 151.124;
+//float latitude = -33.832;       // might make double in future (since trig functions use double)
+//float longitude = 151.124;
 
 
 void setup() {
@@ -30,6 +33,10 @@ void setup() {
     if(status) {
         hd44780::fatalError(status);
     } // if there was an error, blink the lcd backlight.
+
+    while(rtcCheckClock(RTC_ADDRESS)) {
+        Serial.println("Bad clock.");
+    }
 }
 
 
@@ -172,6 +179,9 @@ void loop() {
             lcd.write("Latitude");
             lcd.setCursor(0,1);
             char str[8];
+            float latitude;
+            EEPROM.get(LAT_EEPROM_ADDRESS, latitude);
+            Serial.println(latitude, DEC);
             floatToLcd(latitude, str, 0);    // 0 for latitude
             lcd.write(str);
         } break;
@@ -180,6 +190,8 @@ void loop() {
             lcd.write("Longitude");
             lcd.setCursor(0,1); // second row
             char str[8];
+            float longitude;
+            EEPROM.get(LON_EEPROM_ADDRESS, longitude);
             floatToLcd(longitude, str, 1);    // 1 for longitude
             lcd.write(str);
         } break;
@@ -277,10 +289,10 @@ void digitSelector(byte digit_format) {
         // if lat or lon {convert to float}
         // if date or time {convert to integers} the RtcReadout.hpp time format
     if(digit_format==0) {   // latitude
-        latitude = atof(digits);    // in future, store in EEPROM.
+        EEPROM.put(LAT_EEPROM_ADDRESS, atof(digits));
     }
     else if(digit_format==1) {  // longitude
-        longitude = atof(digits);   // in future, store in EEPROM.
+        EEPROM.put(LON_EEPROM_ADDRESS, atof(digits));   // in future, store in EEPROM.
     }
     else if(digit_format==2) {  // local time
         byte time[3];

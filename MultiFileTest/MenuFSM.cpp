@@ -1,5 +1,11 @@
 #include "MenuFSM.hpp"
 
+#include <Wire.h>
+#include <hd44780.h>                       // main hd44780 header
+#include <hd44780ioClass/hd44780_I2Cexp.h> // i2c expander i/o class header
+
+extern hd44780_I2Cexp lcd;
+
 void menuFSM() {
     /*
         This function uses busy waiting to read the button states (cycle,
@@ -31,6 +37,7 @@ void menuFSM() {
             switch(button) {
                 // if button == cycle     do nothing
                 case select: {
+                    Serial.println("Here1");
                     next_state = gps;
                     lcd.clear();
                 }
@@ -129,6 +136,7 @@ void menuFSM() {
         } break;
         case gps: {
             lcd.home();
+            Serial.println("Here2");
             lcd.write("GPS Coordinates");
         } break;
         case local_time: {

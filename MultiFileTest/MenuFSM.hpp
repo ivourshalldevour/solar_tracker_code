@@ -9,7 +9,6 @@
 #include "RtcMethods.hpp"
 //#include "Lcd.h"
 
-hd44780_I2Cexp lcd(0x27);
 
 typedef enum {start, gps, local_time, date, lat, lon, digit_selector} FSM_State;
 
