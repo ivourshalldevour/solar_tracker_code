@@ -1,42 +1,24 @@
-#include <Wire.h>
-#include <hd44780.h>                       // main hd44780 header
-#include <hd44780ioClass/hd44780_I2Cexp.h> // i2c expander i/o class header
+#include "MenuFSM.hpp"
 
-#include "ButtonInput.hpp"  // uses CSB buttons
-#include "RtcMethods.hpp"
+void menuFSM() {
+    /*
+        This function uses busy waiting to read the button states (cycle,
+        select, and back). All other microcontroller functions will be stopped
+        once menuFSM is entered. The latitude, longitude, date and time are
+        are edited via the LCD.
 
-#define LCD_COLS 16
-#define LCD_ROWS 2
+        Date and time values are stored on the RTC, so menuFSM writes directly
+        to the RTC using I2C, once the values are edited. Latitude and
+        longitude are stored in EEPROM. (Will need to implement this, for now
+        they are globals in FLASH.)
+    */
+    FSM_State current_state = start;
+    FSM_State next_state = start;
 
-hd44780_I2Cexp lcd(0x27); // declare lcd object: auto locate & auto config expander chip
-    // we don't give it a specific I2C address because the library auto finds it.
-
-typedef enum {start, gps, local_time, date, lat, lon, digit_selector} FSM_State;
-
-FSM_State current_state = start;
-FSM_State next_state = start;
-
-float latitude = -33.832;       // might make double in future (since trig functions use double)
-float longitude = 151.124;
-
-
-void setup() {
-    int status;
-
-    Serial.begin(9600); // open the serial port at 9600 bps:
-    Wire.begin();       // join I2C bus as master
-
-    status = lcd.begin(LCD_COLS, LCD_ROWS); // initialising lcd (also turns on backlight)
-    if(status) {
-        hd44780::fatalError(status);
-    } // if there was an error, blink the lcd backlight.
-}
-
-
-void loop() {
     // used for the digitSelector() function to know how to print to lcd.
     // also is convenient to determine what the state immediately prior was.
     static byte digit_format;    // 0=lat 1=lon, 2=hh:mm:ss, 3=yy/mthmth/dd
+
     Button button = readButtons(); // returns which button was pressed (assumes only 1 is pressed at a time).
 
     // Lcd is only cleared in the next state logic. This because we only want
@@ -172,6 +154,7 @@ void loop() {
             lcd.write("Latitude");
             lcd.setCursor(0,1);
             char str[8];
+            // float to LCD doesn't convert decimal places correctly (oh well, fix later).
             floatToLcd(latitude, str, 0);    // 0 for latitude
             lcd.write(str);
         } break;
@@ -180,6 +163,7 @@ void loop() {
             lcd.write("Longitude");
             lcd.setCursor(0,1); // second row
             char str[8];
+            // float to LCD doesn't convert decimal places correctly (oh well, fix later).
             floatToLcd(longitude, str, 1);    // 1 for longitude
             lcd.write(str);
         } break;
@@ -213,6 +197,19 @@ void loop() {
 
 
 void digitSelector(byte digit_format) {
+    /*
+        Used internally by menuFSM(). This is basically its own nested FSM
+        that implements changing(selecting) the digits displayed on the LCD
+        so that lat, lon, date and time values can be edited. Mainly does
+        conversions (string -> float      string -> date/time 
+        date/time -> string   and   float -> string ). The RTC(for date/time)
+        and EEPROM(for lat/lon) are written from within digitSelector().
+        Inputs:
+        - digit_format=0    latitude
+        - digit_format=1    longitude
+        - digit_format=2    local_time
+        - digit_format=3    date
+    */
     char digits[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     // read characters on bottom row of LCD into array.
@@ -275,7 +272,7 @@ void digitSelector(byte digit_format) {
     
     // convert the BCD digit array into whatever format we need
         // if lat or lon {convert to float}
-        // if date or time {convert to integers} the RtcReadout.hpp time format
+        // if date or time {convert to integers} the RtcMethods.hpp time format
     if(digit_format==0) {   // latitude
         latitude = atof(digits);    // in future, store in EEPROM.
     }
@@ -299,7 +296,12 @@ void digitSelector(byte digit_format) {
 void readLcdDigits(char digits[8], byte digit_format) {
     /* 
     A function that is only used internally by digitSelector(). It reads chars
-    on bottom row of LCD and stores them in an array.
+    on bottom row of LCD and stores them in the digits[] array.
+    Inputs:
+        - digit_format=0    latitude
+        - digit_format=1    longitude
+        - digit_format=2    local_time
+        - digit_format=3    date
 
     Assumes:
         - LCD has already been initiallised.
@@ -348,7 +350,8 @@ byte getMaxDigitCol(byte digit_format) {
 void menuPrintTime(byte time[7], byte format) {
     /*
     Prints to the HD44780 LCD with I2C. Uses time values encoded in BCD format
-    directly as read from the RTC.
+    directly as read from the RTC. Basically converts from RTC BCD format to 
+    a string for the LCD to display.
     Inputs:
         - format=0  print local time and add in ':' characters.
         - format=1  print date and add in '/' characters.
@@ -422,6 +425,7 @@ void convertDigitsToTime(byte time[3], byte digits[8], byte format) {
 }
 
 
+// float to LCD doesn't convert decimal places correctly (oh well, fix later).
 char* floatToLcd(float x, char p[8], byte format) {
     /*
     Only to be used to convert lat or lon floats to string. Got this function
@@ -499,4 +503,3 @@ char* floatToLcd(float x, char p[8], byte format) {
     return s;     // might not need this
     */
 }
-
