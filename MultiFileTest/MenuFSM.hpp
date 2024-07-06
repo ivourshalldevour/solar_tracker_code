@@ -2,18 +2,12 @@
 #define MENU_FSM_H
 
 #include <Arduino.h>
-#include <Wire.h>
-#include <hd44780.h>                       // main hd44780 header
-#include <hd44780ioClass/hd44780_I2Cexp.h> // i2c expander i/o class header
-#include "ButtonInput.hpp"
-#include "RtcMethods.hpp"
-//#include "Lcd.h"
 
+#define LAT_EEPROM_ADDRESS 0    // spaced by 4 bytes since latitude and longitude are
+#define LON_EEPROM_ADDRESS 4    // floats which take up 4bytes each.
 
-typedef enum {start, gps, local_time, date, lat, lon, digit_selector} FSM_State;
-
-extern float latitude;
-extern float longitude;
+// typedef enum state; is not defined here in the headder file so that it
+// cannot be accessed outside the MenuFSM code.
 
 void menuFSM();
 void digitSelector(byte digit_format);

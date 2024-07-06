@@ -1,10 +1,15 @@
 #include "MenuFSM.hpp"
+#include "ButtonInput.hpp"
+#include "RtcMethods.hpp"
 
+#include <Arduino.h>
 #include <Wire.h>
 #include <hd44780.h>                       // main hd44780 header
 #include <hd44780ioClass/hd44780_I2Cexp.h> // i2c expander i/o class header
+#include <EEPROM.h>
 
-extern hd44780_I2Cexp lcd;
+extern hd44780_I2Cexp lcd; // defined in main .ino file.
+typedef enum {start, gps, local_time, date, lat, lon, digit_selector} FSM_State;
 
 void menuFSM() {
     /*
@@ -18,6 +23,7 @@ void menuFSM() {
         longitude are stored in EEPROM. (Will need to implement this, for now
         they are globals in FLASH.)
     */
+
     FSM_State current_state = start;
     FSM_State next_state = start;
 
@@ -37,7 +43,6 @@ void menuFSM() {
             switch(button) {
                 // if button == cycle     do nothing
                 case select: {
-                    Serial.println("Here1");
                     next_state = gps;
                     lcd.clear();
                 }
@@ -136,7 +141,6 @@ void menuFSM() {
         } break;
         case gps: {
             lcd.home();
-            Serial.println("Here2");
             lcd.write("GPS Coordinates");
         } break;
         case local_time: {
@@ -162,7 +166,8 @@ void menuFSM() {
             lcd.write("Latitude");
             lcd.setCursor(0,1);
             char str[8];
-            // float to LCD doesn't convert decimal places correctly (oh well, fix later).
+            float latitude;
+            EEPROM.get(LAT_EEPROM_ADDRESS, latitude);
             floatToLcd(latitude, str, 0);    // 0 for latitude
             lcd.write(str);
         } break;
@@ -171,7 +176,8 @@ void menuFSM() {
             lcd.write("Longitude");
             lcd.setCursor(0,1); // second row
             char str[8];
-            // float to LCD doesn't convert decimal places correctly (oh well, fix later).
+            float longitude;
+            EEPROM.get(LON_EEPROM_ADDRESS, longitude);
             floatToLcd(longitude, str, 1);    // 1 for longitude
             lcd.write(str);
         } break;
@@ -280,12 +286,12 @@ void digitSelector(byte digit_format) {
     
     // convert the BCD digit array into whatever format we need
         // if lat or lon {convert to float}
-        // if date or time {convert to integers} the RtcMethods.hpp time format
+        // if date or time {convert to integers} the RtcReadout.hpp time format
     if(digit_format==0) {   // latitude
-        latitude = atof(digits);    // in future, store in EEPROM.
+        EEPROM.put(LAT_EEPROM_ADDRESS, atof(digits));
     }
     else if(digit_format==1) {  // longitude
-        longitude = atof(digits);   // in future, store in EEPROM.
+        EEPROM.put(LON_EEPROM_ADDRESS, atof(digits));
     }
     else if(digit_format==2) {  // local time
         byte time[3];
@@ -358,8 +364,7 @@ byte getMaxDigitCol(byte digit_format) {
 void menuPrintTime(byte time[7], byte format) {
     /*
     Prints to the HD44780 LCD with I2C. Uses time values encoded in BCD format
-    directly as read from the RTC. Basically converts from RTC BCD format to 
-    a string for the LCD to display.
+    directly as read from the RTC.
     Inputs:
         - format=0  print local time and add in ':' characters.
         - format=1  print date and add in '/' characters.
@@ -433,7 +438,6 @@ void convertDigitsToTime(byte time[3], byte digits[8], byte format) {
 }
 
 
-// float to LCD doesn't convert decimal places correctly (oh well, fix later).
 char* floatToLcd(float x, char p[8], byte format) {
     /*
     Only to be used to convert lat or lon floats to string. Got this function

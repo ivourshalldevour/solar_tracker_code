@@ -24,11 +24,16 @@ FSM_State next_state = start;
 
 
 void setup() {
-    int status;
-
     Serial.begin(9600); // open the serial port at 9600 bps:
     Wire.begin();       // join I2C bus as master
 
+    // set required button pins as inputs
+    PORTB = PORTB & 0b11111110; // setting PB0 (pin8) as input without pullup.
+    DDRB  = DDRB  & 0b11111110;
+    PORTC = PORTC & 0b01101111; // setting PC7 & PC4 (pin7 and pin4)as inputs without pullups.
+    DDRC  = DDRC  & 0b01101111;
+
+    int status;
     status = lcd.begin(LCD_COLS, LCD_ROWS); // initialising lcd (also turns on backlight)
     if(status) {
         hd44780::fatalError(status);
@@ -181,7 +186,6 @@ void loop() {
             char str[8];
             float latitude;
             EEPROM.get(LAT_EEPROM_ADDRESS, latitude);
-            Serial.println(latitude, DEC);
             floatToLcd(latitude, str, 0);    // 0 for latitude
             lcd.write(str);
         } break;
