@@ -24,8 +24,12 @@ void menuFSM() {
         they are globals in FLASH.)
     */
 
-    FSM_State current_state = start;
-    FSM_State next_state = start;
+    // Maybe not good to have these defined as statics. Might change them to
+    // be passed as arguments to the function later. This way once menu FSM is
+    // no longer being used (when solar tracker is doing tracking movements)
+    // the two state variables don't take up memory.
+    static FSM_State current_state = start;
+    static FSM_State next_state = start; 
 
     // used for the digitSelector() function to know how to print to lcd.
     // also is convenient to determine what the state immediately prior was.

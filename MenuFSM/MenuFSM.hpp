@@ -9,7 +9,10 @@
 // typedef enum state; is not defined here in the headder file so that it
 // cannot be accessed outside the MenuFSM code.
 
+// This function uses 3 statics (current_state, next_state, digit_format)
+// Might change later to be passed as arguments, to save memory.
 void menuFSM();
+
 void digitSelector(byte digit_format);
 void readLcdDigits(char digits[8], byte digit_format);
 byte getMaxDigitCol(byte digit_format);
