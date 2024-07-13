@@ -6,7 +6,6 @@ ISR(TIMER1_COMPA_vect) {
     cli();  // make sure no other interrupts can override this one.
     TCCR1B = TCCR1B & 0b11111000;   // stop counter. It will be cleared when starting timer next time.
     PORTD = PORTD & 0b10011111;     // Set pins 5&6 to output 0
-    Serial.println(TCNT1);
     sei();
 }
 
