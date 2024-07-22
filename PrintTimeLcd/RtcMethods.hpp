@@ -6,12 +6,18 @@
 
 #define RTC_ADDRESS 0b1101000   // for PCF8523 chip
 
+// ISR to wakeup the arduino when RTC alarm (or countdown timer) goes off.
+ISR(EXT_INT0);
 
 byte rtcCheckClock(int address);
 
+void rtcSetupCountdown(byte interval, int rtc_address);
+
+int julianDay(byte* time);
+
 void rtcGetTime(byte time[7], int rtc_address);
 
-void rtcConvertTime(byte *time);
+void rtcConvertTime(byte* time);
 
 void rtcWriteTime(byte time[3], int rtc_address);
 

@@ -1,5 +1,41 @@
 #include "RtcMethods.hpp"
 
+/*
+    // Code to check if RTC is in battery switchover mode.
+    // If not,  put it in battery switchover mode.
+    Wire.beginTransmission(RTC_ADDRESS);
+    Wire.write(0x2); // address of control register 3
+    Wire.requestFrom(RTC_ADDRESS,1); // read only 1 byte (only control register 3)
+    byte ctrl_reg3 = Wire.read();
+    Wire.endTransmission();
+    Serial.println(ctrl_reg3, BIN);
+    if((ctrl_reg3 & 0b11100000) != 0) { // if not in battery switchover
+        Serial.println("changing ctrl_reg3.");
+        Wire.beginTransmission(RTC_ADDRESS);
+        Wire.write(0x2);    //address
+        Wire.write(ctrl_reg3 & 0b00011111);       // value at that address
+        // ctrl_reg3[7:5] becomes 0b101    battery switchover enabled
+        Wire.endTransmission();
+    }
+    Wire.beginTransmission(RTC_ADDRESS);
+    Wire.write(0x2); // address of control register 3
+    Wire.requestFrom(RTC_ADDRESS,1); // read only 1 byte (only control register 3)
+    ctrl_reg3 = Wire.read();
+    Wire.endTransmission();
+    Serial.println(ctrl_reg3, BIN);
+*/
+
+
+// defined in main .ino file
+extern byte rtc_interrupt;
+
+
+ISR(EXT_INT0) {
+    rtc_interrupt = 1;
+    Serial.println("RTC interrupt serviced in ISR.");
+}
+
+
 byte rtcCheckClock(int address) {
     // Assumes the PCF8523 chip is being used.
     // returns 1 if the OS flag is set. Therefore clock integrity cannot be guaranteed.
@@ -20,7 +56,29 @@ byte rtcCheckClock(int address) {
     else {
         return 0; // OS flag was not set.
     }
-    Wire.endTransmission();
+}
+
+
+int julianDay(byte* time) {
+    // check if current year is leap year
+    byte leap_year = 0;
+    if((time[6]%4) == 0) {
+        leap_year = 1;
+    }
+
+    // Adjust february to have 29 days if leap year.
+    byte days_in_month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    if(leap_year) {
+        days_in_month[1]++;
+    }
+    
+    // Calculate days since beginning of year.
+    int julian_day = time[3];   // days
+    for(byte i=0; i++; i < (time[5]-1)) {
+        julian_day = julian_day + (int)days_in_month[i];
+        i++;
+    }
+    return julian_day;
 }
 
 void rtcGetTime(byte time[7], int rtc_address) {
@@ -47,7 +105,8 @@ void rtcGetTime(byte time[7], int rtc_address) {
     Wire.endTransmission();                 // "Hang up the line" so others can use it (can have multiple slaves & masters connected)
 }
 
-void rtcConvertTime(byte *time) {
+
+void rtcConvertTime(byte* time) {
     /*
     A function that takes raw time data from the PCF8523 RTC chip and converts it
     from BCD into normal binary encoding. Should be called after rtcGetTime().
@@ -87,6 +146,7 @@ void rtcConvertTime(byte *time) {
     time[6] = (time[6] >> 4)*10 + (time[6] & low_nibble);
 }
 
+
 void rtcWriteTime(byte time[3], int rtc_address) {
     /* 
     Writes the local time (ss:mm:hh)  to an RTC on the
@@ -110,6 +170,7 @@ void rtcWriteTime(byte time[3], int rtc_address) {
     Wire.endTransmission();
 }
 
+
 void rtcWriteDate(byte time[3], int rtc_address) {
     /* 
     Writes the date (dd/mm/yy) to an RTC on the
@@ -121,6 +182,7 @@ void rtcWriteDate(byte time[3], int rtc_address) {
      Assumes:
          - each time[] element is in BCD encoding.
          - time[0]=day, time[1]=month, 2=year  (bascially little endian)
+         - Weekday number (sunday, monday, etc) is not changed.
          - Already joined I2C bus as master.  Wire.begin(); is done.
     */
     
@@ -133,4 +195,6 @@ void rtcWriteDate(byte time[3], int rtc_address) {
     Wire.write(0x8);    // set to months register   (must skip weekdays register)
     Wire.write(time[1]);     // write in month number
     Wire.write(time[2]);     // write in year number
+    Wire.endTransmission();
 }
+
