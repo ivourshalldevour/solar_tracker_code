@@ -30,9 +30,8 @@
 extern byte rtc_interrupt;
 
 
-ISR(EXT_INT0) {
+ISR(INT0_vect) {
     rtc_interrupt = 1;
-    Serial.println("RTC interrupt serviced in ISR.");
 }
 
 
@@ -96,7 +95,7 @@ void rtcGetTime(byte time[7], int rtc_address) {
 
     Wire.beginTransmission(rtc_address);    // Get the slave's attention, tell it we're sending a command byte
     Wire.write(0x3);                        // The command byte, sets pointer to register with address of 0x3
-    Wire.requestFrom(RTC_ADDRESS,7);        // Tell slave we need to read 7bytes begining at the current register
+    Wire.requestFrom(rtc_address,7);        // Tell slave we need to read 7bytes begining at the current register
     int i = 0;
     while(Wire.available() != 0 && (i < 7)) {   // making sure that there are still bytes to read from I2C
         time[i] = Wire.read();          // read that byte into 'rtc_time' array

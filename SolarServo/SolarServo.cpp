@@ -32,7 +32,7 @@ void setupServoTimer() {
 
 void commandServo(byte servo_num, int8_t angle) {
     // generating one-shot pulse
-    cli();
+    // cli(); // already done by default by ATMEGA328P processor
     OCR1A = 24000 + angle*177;  // signed integer multiplication
     TCNT1 = 0;  // clear the counter.
     if(servo_num==1) {
@@ -42,7 +42,7 @@ void commandServo(byte servo_num, int8_t angle) {
         PORTD = PORTD | 0b00100000; // Output a HIGH in pin 5.
     }
     TCCR1B = TCCR1B | (1<<CS10);    // start counter with prescaler of 1.
-    sei();
+    // sei(); // already done by default by ATMEGA328P processor
 }
 
 // IDEA!!!

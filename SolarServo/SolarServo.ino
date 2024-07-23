@@ -21,9 +21,9 @@ void setup() {
 }
 
 void loop() {
-    commandServo(1, 45);
+    commandServo(0, 0);
     delay(2000);
-    commandServo(1, 90);    
+    commandServo(0, 45);    
     delay(2000);
 }
 

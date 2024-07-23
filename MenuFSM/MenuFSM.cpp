@@ -20,8 +20,7 @@ void menuFSM() {
 
         Date and time values are stored on the RTC, so menuFSM writes directly
         to the RTC using I2C, once the values are edited. Latitude and
-        longitude are stored in EEPROM. (Will need to implement this, for now
-        they are globals in FLASH.)
+        longitude are stored in EEPROM.
     */
 
     // Maybe not good to have these defined as statics. Might change them to

@@ -10,6 +10,8 @@
 hd44780_I2Cexp lcd; // declare lcd object: auto locate & auto config expander chip
     // we don't give it a specific I2C address because the library auto finds it.
 
+byte rtc_interrupt;
+
 void setup() {
     int status;
 

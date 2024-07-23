@@ -13,6 +13,7 @@
 
 hd44780_I2Cexp lcd(0x27); // declare lcd object: auto locate & auto config expander chip
     // we don't give it a specific I2C address because the library auto finds it.
+byte rtc_interrupt = 0;
 
 //float latitude = -33.832;       // might make double in future (since trig functions use double)
 //float longitude = 151.124;

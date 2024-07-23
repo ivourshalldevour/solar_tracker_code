@@ -55,14 +55,6 @@ void setup() {
         Serial.println("Bad clock.");
     }
 
-    // set the RTC to generate alarm and countdown timer interrupts
-        // Write to Tmr_CLKOUT_ctrl register
-            // set permanent active interrupt (TAM bit)
-            // set permanent active interrupt (TBM bit)
-            // disable CLKOUT generation (COF bits)
-            // disable timer A (TAC bits)
-            // enable timer B (TBC bit)
-
     setupServoTimer();  // also configures pins 5&6 as outputs.
     rtc_interrupt=1;
 }
