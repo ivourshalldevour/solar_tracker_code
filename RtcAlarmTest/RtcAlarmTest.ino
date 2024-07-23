@@ -78,12 +78,13 @@ void loop() {
         // Now, read time and print to serial.
         byte time[7] {0,0,0,0,0,0,0};
         rtcGetTime(time, RTC_ADDRESS);
-        Serial.println("ss:mm:hh");
-        Serial.print(time[0]);
+        rtcConvertTime(time);
+        Serial.println("hh:mm:ss");
+        Serial.print(time[2]);
         Serial.print(":");
         Serial.print(time[1]);
         Serial.print(":");
-        Serial.println(time[2]);
+        Serial.println(time[0]);
     }
 }
 

@@ -42,6 +42,7 @@ byte rtcCheckClock(int address) {
     // returns 0 if the flag was 0.
     Wire.beginTransmission(address);
     Wire.write(0x3);                // set to seconds register
+    Wire.endTransmission(false);    // false so line is not released.
     Wire.requestFrom(address,1);    // read the seconds register
     byte sec_reg = Wire.read();
     Wire.endTransmission();
@@ -95,6 +96,7 @@ void rtcGetTime(byte time[7], int rtc_address) {
 
     Wire.beginTransmission(rtc_address);    // Get the slave's attention, tell it we're sending a command byte
     Wire.write(0x3);                        // The command byte, sets pointer to register with address of 0x3
+    Wire.endTransmission(false);    // false so line is not released.
     Wire.requestFrom(rtc_address,7);        // Tell slave we need to read 7bytes begining at the current register
     int i = 0;
     while(Wire.available() != 0 && (i < 7)) {   // making sure that there are still bytes to read from I2C
