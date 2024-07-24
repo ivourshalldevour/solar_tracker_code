@@ -3,9 +3,10 @@
 
 #include <Arduino.h>
 
-// defined in header file. Therefore, accessable outside the ButtonInput code.
 typedef enum {none, cycle, select, back} Button;
 
 Button readButtons();
+
+ISR(PCINT2_vect);
 
 #endif

@@ -1,5 +1,8 @@
 #include "ButtonInput.hpp"
 
+// defined in main .ino file
+extern byte keyboard_interrupt;
+
 Button readButtons() {
     /*
         A function that performs rising edge detection on the three input buttons:
@@ -18,9 +21,9 @@ Button readButtons() {
 
     Button pressed;
 
-    static byte c_prev = 0;
-    static byte s_prev = 0;
-    static byte b_prev = 0;
+    static byte c_prev = c_current;
+    static byte s_prev = s_current;
+    static byte b_prev = b_current;
 
     // this is used to detect rising edge.
     if(c_current==1 && c_prev==0)
@@ -38,3 +41,12 @@ Button readButtons() {
 
     return pressed;
 }
+
+
+ISR(PCINT2_vect) {
+    if((PIND & 0b10011000) != 0) {
+        keyboard_interrupt = 1;    // rising edge on any of the CSB buttons
+    }
+    else keyboard_interrupt = 0;    // falling edge (ignore this interrupt)
+}
+

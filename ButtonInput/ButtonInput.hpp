@@ -7,4 +7,6 @@ typedef enum {none, cycle, select, back} Button;
 
 Button readButtons();
 
+ISR(PCINT2_vect);
+
 #endif

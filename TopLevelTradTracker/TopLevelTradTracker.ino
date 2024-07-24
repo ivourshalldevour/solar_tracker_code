@@ -32,16 +32,13 @@ void setup() {
     Wire.begin();       // join I2C bus as master
 
     // Set these pins as inputs for the Cycle, Select, Back buttons.
-    PORTB = PORTB & 0b11111110; // setting PB0 (pin8) as input without pullup.
-    DDRB  = DDRB  & 0b11111110;
-    PORTC = PORTC & 0b01101111; // setting PC7 & PC4 (pin7 and pin4)as inputs without pullups.
-    DDRC  = DDRC  & 0b01101111;
+    PORTC = PORTC & 0b01100111; // setting PC7, PC4, PC3 (pin7, pin4, pin3)as inputs without pullups.
+    DDRC  = DDRC  & 0b01100111;
 
     // Enable pin change interrupts on the Cycle, Select, Back buttons.
-        // C is PB0     S is PD7    B is PD4
-        // PCINT0       PCINT23     PCINT20
-        // PCIE0        PCIE2       PCIE2
-    // therefore we have two interrupts
+    PCICR = PCICR | (1 << PCIE2);   // enabling interrupts from pins PD7-PD0.
+    PCMSK2 = PCMSK2 | (1<<PCINT23) | (1<<PCINT20) | (1<<PCINT19);   // Masking so only PD7 PD4 & PD3 cause interrupts.
+    // these pin change interrupts call PCINT2_vect.
 
     // Set pin 2 (INT0) to be external interrupt from RTC
     DDRD = DDRD & 0b11111011;   // set pin to to input.
@@ -106,7 +103,7 @@ void loop() {
         Serial.print("DEC: "); Serial.println(declination);
 
         // calculate elevation angle (to check if above horizon)
-        float elev = asin(sin(declination)*);
+        //float elev = asin(sin(declination)*);
         // if sun above horizon.
             // move servos.
             // goto sleep.
@@ -116,15 +113,12 @@ void loop() {
             // set alarm for this sunrise time.
             // goto sleep.
     }
-    else if(keyboard_interrupt==1) {    // for now technically impossible to enter since we dont have an ISR to set this flag.
+    else if(keyboard_interrupt==1) {
         keyboard_interrupt = 0; // clear flag.
-
-        // disable pin change interrupts from any of the CSB buttons.
-
+        PCICR = PCICR & (!(1<<PCIE2));  // disable pin change interrupts from any of the CSB buttons.
         menuFSM();
-
-        // enable pin change interrupts from the CSB buttons again.
-
+        PCIFR = PCIFR | (1<<PCIF2);   // clear PCINT2 flag by writing one to it.
+        PCICR = PCICR | (1<<PCIE2); // enable pin change interrupts from the CSB buttons again.
     }
 }
 

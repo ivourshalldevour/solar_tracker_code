@@ -22,191 +22,194 @@ void menuFSM() {
         to the RTC using I2C, once the values are edited. Latitude and
         longitude are stored in EEPROM.
     */
+    Serial.println("Entered MenuFSM.");
 
-    // Maybe not good to have these defined as statics. Might change them to
-    // be passed as arguments to the function later. This way once menu FSM is
-    // no longer being used (when solar tracker is doing tracking movements)
-    // the two state variables don't take up memory.
-    static FSM_State current_state = start;
-    static FSM_State next_state = start; 
+    FSM_State current_state = start;
+    FSM_State next_state = start; 
 
     // used for the digitSelector() function to know how to print to lcd.
     // also is convenient to determine what the state immediately prior was.
-    static byte digit_format;    // 0=lat 1=lon, 2=hh:mm:ss, 3=yy/mthmth/dd
+    byte digit_format;    // 0=lat 1=lon, 2=hh:mm:ss, 3=yy/mthmth/dd
 
-    Button button = readButtons(); // returns which button was pressed (assumes only 1 is pressed at a time).
+    for(;;) {   // this loop is what does the busy waiting, and why program gets stuck in MenuFSM.
 
-    // Lcd is only cleared in the next state logic. This because we only want
-    // the lcd to be cleared when a state transition occurs, and not every loop
-    // iteration. Otherwise screen would flicker. (Maybe not, but i think so.)
+        Button button = readButtons(); // returns which button was pressed (assumes only 1 is pressed at a time).
 
-    // next state logic
-    switch(current_state) {
-        case start:
-            switch(button) {
-                // if button == cycle     do nothing
-                case select: {
-                    next_state = gps;
-                    lcd.clear();
+        // Lcd is only cleared in the next state logic. This because we only want
+        // the lcd to be cleared when a state transition occurs, and not every loop
+        // iteration. Otherwise screen would flicker. (Maybe not, but i think so.)
+
+        // next state logic
+        switch(current_state) {
+            case start:
+                switch(button) {
+                    // if button == cycle     do nothing
+                    case select: {
+                        next_state = gps;
+                        lcd.clear();
+                    } break;
+                    case back: {
+                        lcd.clear();
+                        return; // exit menuFSM function.
+                    }
                 }
-                // if button == back        go back to sleep mode?? (future implementation)
-            }
-            break;
-        case gps:
-            switch(button) {
-                case cycle: {
-                    next_state = local_time;
-                    lcd.clear();
-                } break;
-                case select: { 
+                break;
+            case gps:
+                switch(button) {
+                    case cycle: {
+                        next_state = local_time;
+                        lcd.clear();
+                    } break;
+                    case select: { 
+                        next_state = lat;
+                        lcd.clear();
+                    } break;
+                    case back: {
+                        next_state = start;
+                        lcd.clear();
+                    }
+                }
+                break;
+            case local_time:
+                switch(button) {
+                    case cycle: {
+                        next_state = date; 
+                        lcd.clear();
+                    } break;
+                    case select: {
+                        next_state = digit_selector;
+                        digit_format = 2;
+                    } break;
+                    case back: {
+                        next_state = start;
+                        lcd.clear();
+                    }
+                }
+                break;
+            case date:
+                switch(button) {
+                    case cycle: { 
+                        next_state = gps;
+                        lcd.clear();
+                    } break;
+                    case select: {
+                        next_state = digit_selector;
+                        digit_format = 3;
+                    } break;
+                    case back: {
+                        next_state = start;
+                        lcd.clear();
+                    }
+                }
+                break;
+            case lat:
+                switch(button) {
+                    case cycle: {
+                        next_state = lon;
+                        lcd.clear();
+                    } break;
+                    case select: {
+                        next_state = digit_selector;
+                        digit_format = 0;
+                    } break;
+                    case back: {
+                        next_state = gps;
+                        lcd.clear();
+                    }
+                }
+                break;
+            case lon:
+                switch(button) {
+                    case cycle: {
+                        next_state = lat;
+                        lcd.clear();
+                    } break;
+                    case select: {
+                        next_state = digit_selector;
+                        digit_format = 1;
+                    } break;
+                    case back: {
+                        next_state = gps;
+                        lcd.clear();
+                    }
+                }
+            // digit_selector case is actually handled in output logic.
+        }
+        current_state = next_state; 
+        // end of next state logic
+
+        // output logic
+        switch(current_state) {
+            case start: {
+                lcd.home();     // these homing lines are required because the LCD is constantly being bombarded with write commands. Even when no state change occurs or no buttons are pressed.
+                lcd.write("Main Menu");
+            } break;
+            case gps: {
+                lcd.home();
+                lcd.write("GPS Coordinates");
+            } break;
+            case local_time: {
+                lcd.home();
+                lcd.write("Local Time");
+                // get time and print it on second row
+                // this could be updated each second (looks cool)
+                // or could just display time once, at entry to this state.
+                byte time[7];
+                rtcGetTime(time, RTC_ADDRESS);
+                menuPrintTime(time, 0); // 0 for printing local time. 
+            } break;
+            case date: {
+                lcd.home();
+                lcd.write("Date (dd/mm/yy)");
+                // get date and print it on second row
+                byte time[7];
+                rtcGetTime(time, RTC_ADDRESS);
+                menuPrintTime(time, 1); // 1 for printing date.
+            } break;
+            case lat: {
+                lcd.home();
+                lcd.write("Latitude");
+                lcd.setCursor(0,1);
+                char str[8];
+                float latitude;
+                EEPROM.get(LAT_EEPROM_ADDRESS, latitude);
+                floatToLcd(latitude, str, 0);    // 0 for latitude
+                lcd.write(str);
+            } break;
+            case lon: {
+                lcd.home();
+                lcd.write("Longitude");
+                lcd.setCursor(0,1); // second row
+                char str[8];
+                float longitude;
+                EEPROM.get(LON_EEPROM_ADDRESS, longitude);
+                floatToLcd(longitude, str, 1);    // 1 for longitude
+                lcd.write(str);
+            } break;
+            case digit_selector: {
+                digitSelector(digit_format);
+                // next state depends on from where digit_selector was entered.
+                // must check digit_format to know previous state.
+                if(digit_format == 0) {
                     next_state = lat;
                     lcd.clear();
-                } break;
-                case back: {
-                    next_state = start;
-                    lcd.clear();
                 }
-            }
-            break;
-        case local_time:
-            switch(button) {
-                case cycle: {
-                    next_state = date; 
-                    lcd.clear();
-                } break;
-                case select: {
-                    next_state = digit_selector;
-                    digit_format = 2;
-                } break;
-                case back: {
-                    next_state = start;
-                    lcd.clear();
-                }
-            }
-            break;
-        case date:
-            switch(button) {
-                case cycle: { 
-                    next_state = gps;
-                    lcd.clear();
-                 } break;
-                case select: {
-                    next_state = digit_selector;
-                    digit_format = 3;
-                } break;
-                case back: {
-                    next_state = start;
-                    lcd.clear();
-                }
-            }
-            break;
-        case lat:
-            switch(button) {
-                case cycle: {
+                else if(digit_format == 1) {
                     next_state = lon;
                     lcd.clear();
-                } break;
-                case select: {
-                    next_state = digit_selector;
-                    digit_format = 0;
-                } break;
-                case back: {
-                    next_state = gps;
+                }
+                else if(digit_format == 2) {
+                    next_state = local_time;
                     lcd.clear();
                 }
-            }
-            break;
-        case lon:
-            switch(button) {
-                case cycle: {
-                    next_state = lat;
-                    lcd.clear();
-                } break;
-                case select: {
-                    next_state = digit_selector;
-                    digit_format = 1;
-                } break;
-                case back: {
-                    next_state = gps;
+                else if(digit_format == 3) {      // technically doesn't need to be else if() could just be else
+                    next_state = date;
                     lcd.clear();
                 }
-            }
-        // digit_selector case is actually handled in output logic.
-    }
-    current_state = next_state; 
-    // end of next state logic
-
-    // output logic
-    switch(current_state) {
-        case start: {
-            lcd.home();     // these homing lines are required because the LCD is constantly being bombarded with write commands. Even when no state change occurs or no buttons are pressed.
-            lcd.write("Main Menu");
-        } break;
-        case gps: {
-            lcd.home();
-            lcd.write("GPS Coordinates");
-        } break;
-        case local_time: {
-            lcd.home();
-            lcd.write("Local Time");
-            // get time and print it on second row
-            // this could be updated each second (looks cool)
-            // or could just display time once, at entry to this state.
-            byte time[7];
-            rtcGetTime(time, RTC_ADDRESS);
-            menuPrintTime(time, 0); // 0 for printing local time. 
-        } break;
-        case date: {
-            lcd.home();
-            lcd.write("Date (dd/mm/yy)");
-            // get date and print it on second row
-            byte time[7];
-            rtcGetTime(time, RTC_ADDRESS);
-            menuPrintTime(time, 1); // 1 for printing date.
-        } break;
-        case lat: {
-            lcd.home();
-            lcd.write("Latitude");
-            lcd.setCursor(0,1);
-            char str[8];
-            float latitude;
-            EEPROM.get(LAT_EEPROM_ADDRESS, latitude);
-            floatToLcd(latitude, str, 0);    // 0 for latitude
-            lcd.write(str);
-        } break;
-        case lon: {
-            lcd.home();
-            lcd.write("Longitude");
-            lcd.setCursor(0,1); // second row
-            char str[8];
-            float longitude;
-            EEPROM.get(LON_EEPROM_ADDRESS, longitude);
-            floatToLcd(longitude, str, 1);    // 1 for longitude
-            lcd.write(str);
-        } break;
-        case digit_selector: {
-            digitSelector(digit_format);
-            // next state depends on from where digit_selector was entered.
-            // must check digit_format to know previous state.
-            if(digit_format == 0) {
-                next_state = lat;
-                lcd.clear();
-            }
-            else if(digit_format == 1) {
-                next_state = lon;
-                lcd.clear();
-            }
-            else if(digit_format == 2) {
-                next_state = local_time;
-                lcd.clear();
-            }
-            else if(digit_format == 3) {      // technically doesn't need to be else if() could just be else
-                next_state = date;
-                lcd.clear();
-            }
-            else {
-                lcd.clear();
-                lcd.write("Inval digi_forma");
+                else {
+                    lcd.clear();
+                    lcd.write("Inval digi_forma");
+                }
             }
         }
     }
