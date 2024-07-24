@@ -64,30 +64,14 @@ void setup() {
     /* Main program loop */
 
 void loop() {
-    
-    // read RTC's Control_2 register
-    // if AF==1
-        // clear AF & CTBF
-        // disable alarm timer.
-        // enable timer B
-    // if CTBF==1
-        // clear AF & CTBF
-
     if(rtc_interrupt==1) {
-        /*
-        // read RTC's Control_2 register
+        rtc_interrupt = 0;
+
+        // clear the RTC's CTBF flag.
         Wire.beginTransmission(RTC_ADDRESS);
-        Wire.write(0x1);   // set to address of Control_2 register
-        Wire.requestFrom(RTC_ADDRESS, 1);   // read 1 byte
-        byte rtc_control_2 = Wire.read();
+        Wire.write(0x1);    // Control_2 register address
+        Wire.write(0b00000001); // clear all flags & set CTBIE (enables timer B).
         Wire.endTransmission();
-        
-        // Clear AF and CTBF in RTC registers
-        Wire.beginTransmission(RTC_ADDRESS);
-        Wire.write(0x1);   // set to address of Control_2 register
-        Wire.write(rtc_control_2 & 0b11010111);
-        Wire.endTransmission();
-        */
         
         // get date and time from RTC.
         byte time[7];
@@ -126,12 +110,16 @@ void loop() {
             // set alarm for this sunrise time.
             // goto sleep.
     }
-
     else if(keyboard_interrupt==1) {    // for now technically impossible to enter since we dont have an ISR to set this flag.
         keyboard_interrupt = 0; // clear flag.
-        //menuFSM();
+
+        // disable pin change interrupts from any of the CSB buttons.
+
+        menuFSM();
+
+        // enable pin change interrupts from the CSB buttons again.
+        
     }
-    rtc_interrupt=0;
 }
 
 

@@ -30,31 +30,7 @@ void setup() {
         Serial.println("Bad clock.");
     }
 
-    // set the RTC to generate countdown timer B interrupts every 30 seconds.
-        // Write to Control_2 register
-            Wire.beginTransmission(RTC_ADDRESS);
-            Wire.write(0x1);    // address of Control_2
-            Wire.write(0b00000001);   // Set CTBIE=1 to enable countdown timer B interrupts. Also clear all flags.
-            Wire.endTransmission();
-        // Write to Tmr_B_Freq_ctrl register & load value into T_B.
-            Wire.beginTransmission(RTC_ADDRESS);
-            Wire.write(0x12);   // address of Tmr_B_Freq_ctrl
-            Wire.write(0b00000010);
-            // TBW don't care. Arduino interrupts set to trigger on falling edge not level, so pulse width doesn't matter.
-            // TBQ = 0b010 for counting seconds.
-            Wire.write(5);   // Load timer value into T_B. Interrupts will be generated every 5 seconds.
-            Wire.endTransmission();
-        // Write to Tmr_CLKOUT_ctrl register
-            Wire.beginTransmission(RTC_ADDRESS);
-            Wire.write(0x0F);   // address of Tmr_CLKOUT_ctrl
-            Wire.write(0b00111001);
-            // set permanent active interrupt (TAM bit)
-            // set permanent active interrupt (TBM bit)
-            // disable CLKOUT generation (COF bits)
-            // disable timer A (TAC bits)
-            // enable timer B (TBC bit)
-            Wire.endTransmission();
-    
+    rtcSetupCountdown(1, RTC_ADDRESS);
     // Notes:
     /* 
         - To turn off timer B. Clear bit TBC in Tmr_CLKOUT_ctrl register.

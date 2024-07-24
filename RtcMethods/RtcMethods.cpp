@@ -59,6 +59,47 @@ byte rtcCheckClock(int address) {
 }
 
 
+void rtcSetupCountdown(byte interval, int rtc_address) {
+    /*
+        Function that setups up the countdown timer B on the PCF8523 real time
+        clock to generate interrupts on its INT1 pin. This is an active LOW
+        interrupt. The countdown timer B is set to count down the number of
+        minutes given by interval.
+        Input:
+            - interval: number of minutes between each interrupt signal.
+        Output:
+            - Writes to I2C to setup the RTCs registers to start the timer.
+        Assumes:
+            - The interrupt needs to be cleared via I2C in a different function
+              to disable the interrupt.
+    */
+
+    // Write to Control_2 register
+        Wire.beginTransmission(RTC_ADDRESS);
+        Wire.write(0x1);    // address of Control_2
+        Wire.write(0b00000001);   // Set CTBIE=1 to enable countdown timer B interrupts. Also clear all flags.
+        Wire.endTransmission();
+    // Write to Tmr_B_Freq_ctrl register & load value into T_B.
+        Wire.beginTransmission(RTC_ADDRESS);
+        Wire.write(0x12);   // address of Tmr_B_Freq_ctrl
+        Wire.write(0b00000011);
+        // TBW don't care. Arduino interrupts set to trigger on falling edge not level, so pulse width doesn't matter.
+        // TBQ = 0b011 for counting minutes.
+        Wire.write(interval);   // Load number of minutes into T_B.
+        Wire.endTransmission();
+    // Write to Tmr_CLKOUT_ctrl register
+        Wire.beginTransmission(RTC_ADDRESS);
+        Wire.write(0x0F);   // address of Tmr_CLKOUT_ctrl
+        Wire.write(0b00111001);
+        // set permanent active interrupt (TAM bit)
+        // set permanent active interrupt (TBM bit)
+        // disable CLKOUT generation (COF bits)
+        // disable timer A (TAC bits)
+        // enable timer B (TBC bit)
+        Wire.endTransmission();
+}
+
+
 int julianDay(byte* time) {
     // check if current year is leap year
     byte leap_year = 0;
