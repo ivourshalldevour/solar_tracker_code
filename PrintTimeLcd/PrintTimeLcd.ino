@@ -45,6 +45,7 @@ void loop() {
         // get time from rtc
         Wire.beginTransmission(RTC_ADDRESS);    // Get the slave's attention, tell it we're sending a command byte
         Wire.write(0x3);                        // The command byte, sets pointer to register with address of 0x3
+        Wire.endTransmission(false);
         Wire.requestFrom(RTC_ADDRESS,7);        // Tell slave we need to read 7bytes begining at the current register
         int i = 0;
         while(Wire.available() != 0 && (i < 7)) {   // making sure that there are still bytes to read from I2C
