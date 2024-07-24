@@ -21,7 +21,7 @@ hd44780_I2Cexp lcd; // declare lcd object: auto locate & auto config expander ch
     // we don't give it a specific I2C address because the library auto finds it.
 
 //  Flag set by ISRs, and cleared by main program loop.
-byte rtc_interrupt = 0;
+byte rtc_interrupt = 0;         // used to trigger tracker movements.
 byte keyboard_interrupt = 0;    // used to enter MenuFSM function.
 
 
@@ -37,11 +37,17 @@ void setup() {
     PORTC = PORTC & 0b01101111; // setting PC7 & PC4 (pin7 and pin4)as inputs without pullups.
     DDRC  = DDRC  & 0b01101111;
 
-    // Set INT0 pin as external interrupt from the RTC.
-    //DDRD = ... set PD2 as 0 to be input (already done by default).
-    PORTD = PORTD | 0b00000100; // enabling pull-up resistor on PD2.
-    EICRA = 1 << ISC01;     // setting interrupt to be triggered on falling edge.
-    EIMSK = 1 << INT0;   // enabling external interrupt on pin INT0
+    // Enable pin change interrupts on the Cycle, Select, Back buttons.
+        // C is PB0     S is PD7    B is PD4
+        // PCINT0       PCINT23     PCINT20
+        // PCIE0        PCIE2       PCIE2
+    // therefore we have two interrupts
+
+    // Set pin 2 (INT0) to be external interrupt from RTC
+    DDRD = DDRD & 0b11111011;   // set pin to to input.
+    PORTD = PORTD | 0b00000100; // enabling pull-up resistor on pin 2.
+    EICRA = 1 << ISC01;         // setting interrupt to be triggered on falling edge.
+    EIMSK = 1 << INT0;          // enabling external interrupt on pin 2
 
     // initialise the I2C LCD module.
     int status;
@@ -56,7 +62,7 @@ void setup() {
     }
 
     setupServoTimer();  // also configures pins 5&6 as outputs.
-    rtc_interrupt=1;
+    rtcSetupCountdown(1, RTC_ADDRESS);  // configure rtc to generate interrupts every 1 minute.
 }
 
 
@@ -118,7 +124,7 @@ void loop() {
         menuFSM();
 
         // enable pin change interrupts from the CSB buttons again.
-        
+
     }
 }
 

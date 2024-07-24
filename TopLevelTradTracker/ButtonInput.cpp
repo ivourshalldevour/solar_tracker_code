@@ -12,7 +12,7 @@ Button readButtons() {
             - input pins are already configured as inputs with external pullups.
             - it is called from within a loop.
     */
-    byte c_current = digitalRead(8);
+    byte c_current = digitalRead(3);
     byte s_current = digitalRead(7);
     byte b_current = digitalRead(4);
 

@@ -1,7 +1,7 @@
 /*
     This code prints to an LCD via I2C how many
     times each button was pressed:
-        Cycle   (c, on pin 8)
+        Cycle   (c, on pin 3)
         Select  (s, on pin 7)
         Back    (b, on pin 4)
     The buttons are assumed to have external pull-up resistors.
@@ -29,10 +29,10 @@ void setup() {
     int status;
 
     // set required button pins as inputs
-    PORTB = PORTB & 0b11111110; // setting PB0 (pin8) as input without pullup.
-    DDRB  = DDRB  & 0b11111110;
-    PORTC = PORTC & 0b01101111; // setting PC7 & PC4 (pin7 and pin4)as inputs without pullups.
-    DDRC  = DDRC  & 0b01101111;
+    //PORTB = PORTB & 0b11111110; // setting PB0 (pin8) as input without pullup.
+    //DDRB  = DDRB  & 0b11111110;
+    PORTC = PORTC & 0b01100111; // setting PD7, PD4, PD3 (pin7, pin4, pin3)as inputs without pullups.
+    DDRC  = DDRC  & 0b01100111;
 
     Serial.begin(9600); // open the serial port at 9600 bps:
     Wire.begin();       // join I2C bus as master
