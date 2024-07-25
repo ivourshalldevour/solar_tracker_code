@@ -22,7 +22,7 @@ void menuFSM() {
         to the RTC using I2C, once the values are edited. Latitude and
         longitude are stored in EEPROM.
     */
-    Serial.println("Entered MenuFSM.");
+    lcd.on();   // turn on the pixels and backlight.
 
     FSM_State current_state = start;
     FSM_State next_state = start; 
@@ -50,6 +50,7 @@ void menuFSM() {
                     } break;
                     case back: {
                         lcd.clear();
+                        lcd.off();  // turn off pixels and backlight.
                         return; // exit menuFSM function.
                     }
                 }

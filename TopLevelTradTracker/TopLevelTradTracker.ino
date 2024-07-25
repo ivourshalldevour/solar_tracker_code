@@ -52,6 +52,7 @@ void setup() {
     if(status) {
         hd44780::fatalError(status);
     } // if there was an error, blink the lcd backlight.
+    lcd.off();  // turn off pixels and backlight.
 
     // check that the RTC has good clock integrity
     while(rtcCheckClock(RTC_ADDRESS)) {
