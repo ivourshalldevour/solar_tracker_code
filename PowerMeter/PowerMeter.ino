@@ -6,16 +6,7 @@ void setup() {
     Wire.begin();   // join i2c as master
 
     // setup the INA219 current meter chip
-    Wire.beginTransmission(0x40);
-    Wire.write(5);      // calibration register address
-    Wire.write(16);     // MSByte of calibration value.
-    Wire.write(0);      // LSByte of calibration value. Gives a current LSBit of 0.0001Amps
-    Wire.endTransmission();
-    Wire.beginTransmission(0x40);
-    Wire.write(0);      // configuration register address
-    Wire.write(0b00111111); // this is to set PGA gain to /8, 128 samples to average for each
-    Wire.write(0b11111111); // reading (both shunt and bus voltage), and set mode to measure both shunt and bus V continuously.
-    Wire.endTransmission();
+    setupPowerMeter(0x40);
 
     /*
         Notes:
@@ -23,7 +14,6 @@ void setup() {
         store a 16bit value.
         - The INA219 doesn't have an auto incrementing register pointer like the PCF8523 has.
     */
-
 }
 
 void loop() {

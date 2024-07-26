@@ -43,3 +43,17 @@ byte readPower(int* measurements, byte address) {
 
         return 0;   // 0 for success!
 }
+
+
+void setupPowerMeter(byte address) {
+    Wire.beginTransmission(address);
+    Wire.write(5);      // calibration register address
+    Wire.write(16);     // MSByte of calibration value. It is 4096 in decimal (a 16bit value)
+    Wire.write(0);      // LSByte of calibration value. Gives a current LSBit of 0.0001Amps
+    Wire.endTransmission();
+    Wire.beginTransmission(address);
+    Wire.write(0);      // configuration register address
+    Wire.write(0b00111111); // this is to set PGA gain to /8, 128 samples to average for each
+    Wire.write(0b11111111); // reading (both shunt and bus voltage), and set mode to measure both shunt and bus V continuously.
+    Wire.endTransmission();
+}
