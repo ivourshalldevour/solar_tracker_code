@@ -81,6 +81,7 @@ void loop() {
         byte time[7];
         rtcGetTime(time, RTC_ADDRESS);
         rtcConvertTime(time);
+        //Serial.print("rtc_day: "); Serial.println(time[3]); 
 
         // Calculate position of sun (LHA and declination).
         // Using algorithm on PVeducation website. https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
@@ -88,31 +89,60 @@ void loop() {
         // Calculate Local Hour Angle (LHA).
         float longitude;
         EEPROM.get(LON_EEPROM_ADDRESS, longitude);
+        Serial.print("LON: "); Serial.println(longitude);
         int julian_day = julianDay(time);
+        Serial.print("julian_day: "); Serial.println(julian_day);       // julian day
+
         float B = (360.0/365.0)*(julian_day-81)*(PI/180.0);
         float eqn_time = 9.87*sin(2*B) - 7.53*cos(B) - 1.5*sin(B);
-        Serial.print("eqn_time: "); Serial.println(eqn_time);
+        Serial.print("eqn_time: "); Serial.println(eqn_time);           // eqn of time
+
         float LT = (float)((float)time[2]+(float)time[1]*(1/60.0));     // local time (non-daylight saving)
         Serial.print("LT: "); Serial.println(LT);
-        float LST = LT + (1/60.0)*(4*(longitude-150.0) + eqn_time);   // Local solar time (accounts for eqn of time.)
+
+        float LST = LT + (1/60.0)*(4*(longitude-150.0) + eqn_time);     // Local solar time (accounts for eqn of time.)
         Serial.print("LST: "); Serial.println(LST);
-        float LHA = 15.0*(LST-12.0);
+
+        float LHA = 15.0*(LST-12.0);                                    // LHA
         Serial.print("LHA: "); Serial.println(LHA);
 
-        // Calculate Declination
-        float declination = -23.45*cos( (360.0/365.0)*(julian_day-10)*(PI/180.0) );
+        // Calculate declination angle
+        float declination = -23.45*cos( (360.0/365.0)*(julian_day+10)*(PI/180.0) );
         Serial.print("DEC: "); Serial.println(declination);
 
-        // calculate elevation angle (to check if above horizon)
-        //float elev = asin(sin(declination)*);
-        // if sun above horizon.
-            // move servos.
-            // goto sleep.
-        // if sun below horizon
+        float latitude;
+        latitude = EEPROM.get(LAT_EEPROM_ADDRESS, latitude);
+        Serial.print("LAT: "); Serial.println(latitude);
+        
+
+        // calculate elevation angle (+ve above horizon, ranges -90 to +90)
+        float elev = asin(sin(declination*(PI/180.0)) * sin(latitude*(PI/180.0)) + cos(declination*(PI/180.0)) * cos(latitude*(PI/180.0)) * cos(LHA*(PI/180.0)) );
+        Serial.print("elev: "); Serial.println(elev*(180.0/PI));
+        if(elev < 0 ) { // if sun below horizon
             // stop timer B (set TBC=0 in Tmr_CLKOUT_ctrl register).
             // calculate sunrise time.
             // set alarm for this sunrise time.
             // goto sleep.
+            Serial.print("Sun below horizon.");
+            return;
+        }
+        
+        // calculate azimuth angle  (0 at South. +90 at West, -90 at East, ranges -180 to +180)
+        float azi = atan2(sin(LHA*(PI/180.0)), cos(LHA*(PI/180.0))*sin(latitude*(PI/180.0)) - tan(declination*(PI/180.0))*cos(latitude*(PI/180.0)) );
+        Serial.print("azi: "); Serial.println(azi*(180.0/PI));
+
+        // calculate solar tracker axes angles
+        // these formulas won't be valid if sun is below horizon
+        float theta1 = atan( cos(azi*(PI/180.0))*(1/tan(elev*(PI/180.0))) );
+        float theta2 = sin(azi*(PI/180.0))*cos(elev*(PI/180.0));
+
+        Serial.print("theta1: "); Serial.println(theta1*(180.0/PI));
+        Serial.print("theta2: "); Serial.println(theta2*(180.0/PI));
+
+        // moving LHA servo
+        if( (LHA>-90) && (LHA<90) ) {
+            commandServo(1, LHA);
+        }
     }
     else if(keyboard_interrupt==1) {
         keyboard_interrupt = 0; // clear flag.
