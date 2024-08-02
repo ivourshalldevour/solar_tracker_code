@@ -115,9 +115,8 @@ int julianDay(byte* time) {
     
     // Calculate days since beginning of year.
     int julian_day = time[3];   // days
-    for(byte i=0; i++; i < (time[5]-1)) {
+    for(byte i=0; i < (time[5]-1); i++) {
         julian_day = julian_day + (int)days_in_month[i];
-        i++;
     }
     return julian_day;
 }
