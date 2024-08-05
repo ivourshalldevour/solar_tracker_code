@@ -76,7 +76,7 @@ void loop() {
         Wire.write(0x1);    // Control_2 register address
         Wire.write(0b00000001); // clear all flags & set CTBIE (enables timer B).
         Wire.endTransmission();
-        
+
         // get date and time from RTC.
         byte time[7];
         rtcGetTime(time, RTC_ADDRESS);
@@ -110,12 +110,10 @@ void loop() {
         float declination = -23.45*cos( (360.0/365.0)*(julian_day+10)*(PI/180.0) );
         Serial.print("DEC: "); Serial.println(declination);
 
+        // calculate elevation angle (+ve above horizon, ranges -90 to +90)
         float latitude;
         latitude = EEPROM.get(LAT_EEPROM_ADDRESS, latitude);
         Serial.print("LAT: "); Serial.println(latitude);
-        
-
-        // calculate elevation angle (+ve above horizon, ranges -90 to +90)
         float elev = asin(sin(declination*(PI/180.0)) * sin(latitude*(PI/180.0)) + cos(declination*(PI/180.0)) * cos(latitude*(PI/180.0)) * cos(LHA*(PI/180.0)) );
         Serial.print("elev: "); Serial.println(elev*(180.0/PI));
         if(elev < 0 ) { // if sun below horizon
@@ -126,23 +124,22 @@ void loop() {
             Serial.print("Sun below horizon.");
             return;
         }
-        
+
         // calculate azimuth angle  (0 at South. +90 at West, -90 at East, ranges -180 to +180)
         float azi = atan2(sin(LHA*(PI/180.0)), cos(LHA*(PI/180.0))*sin(latitude*(PI/180.0)) - tan(declination*(PI/180.0))*cos(latitude*(PI/180.0)) );
         Serial.print("azi: "); Serial.println(azi*(180.0/PI));
 
         // calculate solar tracker axes angles
         // these formulas won't be valid if sun is below horizon
-        float theta1 = atan( cos(azi*(PI/180.0))*(1/tan(elev*(PI/180.0))) );
-        float theta2 = sin(azi*(PI/180.0))*cos(elev*(PI/180.0));
+        float theta0 = (180.0/PI)*atan( cos(azi)*(1/tan(elev)) );
+        float theta1 = (180.0/PI)*sin(azi)*cos(elev);
+        Serial.print("theta0: "); Serial.println((int8_t)theta0);
+        Serial.print("theta1: "); Serial.println((int8_t)theta1);
 
-        Serial.print("theta1: "); Serial.println(theta1*(180.0/PI));
-        Serial.print("theta2: "); Serial.println(theta2*(180.0/PI));
-
-        // moving LHA servo
-        if( (LHA>-90) && (LHA<90) ) {
-            commandServo(1, LHA);
-        }
+        // moving servos
+        commandServo(0, (int8_t)theta0);
+        delay(20);
+        commandServo(1, (int8_t)theta1);
     }
     else if(keyboard_interrupt==1) {
         keyboard_interrupt = 0; // clear flag.
