@@ -4,17 +4,6 @@
 extern byte keyboard_interrupt;
 
 Button readButtons() {
-    /*
-        A function that performs rising edge detection on the three input buttons:
-            Cycle   (c)
-            Select  (s)
-            Back    (b)
-        Returns the Button enum type. No debouncing is done in software.
-        Assumes:
-            - only one button is pressed at a time.
-            - input pins are already configured as inputs with external pullups.
-            - it is called from within a loop.
-    */
     byte c_current = digitalRead(3);
     byte s_current = digitalRead(7);
     byte b_current = digitalRead(4);

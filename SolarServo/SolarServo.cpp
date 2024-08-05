@@ -34,7 +34,7 @@ void commandServo(byte servo_num, int8_t angle) {
     // generating one-shot pulse
     // cli(); // already done by default by ATMEGA328P processor
     OCR1A = 24000 + angle*177;  // signed integer multiplication
-    TCNT1 = 0;  // clear the counter.
+    TCNT1 = 0;  // clear the counter
     if(servo_num==1) {
         PORTD = PORTD | 0b01000000; // Output a HIGH on pin 6.
     }

@@ -22,13 +22,15 @@ void setup() {
 
 void loop() {
     commandServo(0, 0);
+    delay(10);
     commandServo(1, 0);
     Serial.println("0 degrees.");
-    delay(2000);
-    commandServo(0, 45);   
-    commandServo(1, 45); 
+    delay(4000);
+    commandServo(0, 90);
+    delay(10);
+    commandServo(1, 0);
     Serial.println("45 degrees.");
-    delay(2000);
+    delay(4000);
 }
 
 
