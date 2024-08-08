@@ -60,7 +60,7 @@ void setup() {
     }
 
     setupServoTimer();  // also configures pins 5&6 as outputs.
-    rtcSetupCountdown(1, RTC_ADDRESS);  // configure rtc to generate interrupts every 1 minute.
+    rtcSetupCountdown(1, RTC_ADDRESS);  // configure rtc to generate interrupts every 2 minutes.
 }
 
 

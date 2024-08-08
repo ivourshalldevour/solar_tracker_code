@@ -26,9 +26,9 @@ void loop() {
     commandServo(1, 0);
     Serial.println("0 degrees.");
     delay(4000);
-    commandServo(0, 90);
+    commandServo(0, 45);
     delay(10);
-    commandServo(1, 0);
+    commandServo(1, 45);
     Serial.println("45 degrees.");
     delay(4000);
 }

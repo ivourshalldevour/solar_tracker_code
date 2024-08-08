@@ -16,8 +16,8 @@ void setupServoTimer();
 /*
     Uses timer1 to generate one-shot pulses (only one made for each function
     call) that control the RC servos on pins 5&6 of the arduino. Requires an
-    interrupt service routine to run at tthe end of each pulse, so isn't
-    entirely hardwarae timer solution. The pulses are between 0.5ms and 2.5ms
+    interrupt service routine to run at the end of each pulse, so isn't
+    entirely hardware timer solution. The pulses are between 0.5ms and 2.5ms
     long, which corresponds to +90deg (clockwise) and -90deg (anticlockwise)
     respectively.
 */
