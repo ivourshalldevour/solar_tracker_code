@@ -31,6 +31,7 @@ extern byte rtc_interrupt;
 
 
 ISR(INT0_vect) {
+    // need to check for sepparate timer A and timer B
     rtc_interrupt = 1;
 }
 
