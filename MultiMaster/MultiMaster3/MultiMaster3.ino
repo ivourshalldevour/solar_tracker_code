@@ -1,5 +1,5 @@
 #include <Wire.h>
-#include "mutex.hpp"
+#include "Mutex3.hpp"
 
 /*
     This code is for Arduino 3 (datalogger). It outputs on mutex3 (pinPC3/A3)
@@ -10,7 +10,7 @@
 void setup() {
     Serial.begin(9600);
     // Set pins PB1 and PB0 as inputs. (without pullups)
-    DDRB = DDRB & (!((1<<DDB1) /*| (1<<DDB0)*/));
+    DDRB = DDRB & (!((1<<DDB1) | (1<<DDB0)));
 
     // Set pin PC3 as output.
     PORTC = PORTC & !(1<<PORTC3);   // set to output LOW
@@ -25,9 +25,9 @@ void loop() {
         Serial.println("Failed to arbitrate.");
     }
     else{
-        Serial.println("I2C comms going ahead...");
+        Serial.println("I2C going for it");
         delay(1000);
         endMutex();
     }
-    delay(2000);
+    delay(40);
 }
