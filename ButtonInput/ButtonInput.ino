@@ -24,6 +24,7 @@ hd44780_I2Cexp lcd; // declare lcd object: auto locate & auto config expander ch
 byte c_count = 0;  // no. times this button was pressed.
 byte s_count = 0;
 byte b_count = 0;
+byte keyboard_interrupt = 0;
 
 void setup() {
     int status;

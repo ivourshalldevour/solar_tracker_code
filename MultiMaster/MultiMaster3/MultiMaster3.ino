@@ -26,8 +26,8 @@ void loop() {
     }
     else{
         Serial.println("I2C going for it");
-        delay(1000);
+        delay(50);
         endMutex();
     }
-    delay(40);
+    delay(5000);
 }

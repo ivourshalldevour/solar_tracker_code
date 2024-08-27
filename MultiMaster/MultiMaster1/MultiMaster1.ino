@@ -36,9 +36,9 @@ void loop() {
         lcd.backlight();
         lcd.print("I2C going for it");
     }
-    delay(2000);
+    delay(40);
     endMutex();
     lcd.clear();
     lcd.noBacklight();
-    delay(40);
+    delay(2000);
 }

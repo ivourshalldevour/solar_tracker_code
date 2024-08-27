@@ -5,16 +5,16 @@
     // If not,  put it in battery switchover mode.
     Wire.beginTransmission(RTC_ADDRESS);
     Wire.write(0x2); // address of control register 3
+    Wire.endTransmission(false);    // false so line is not released.
     Wire.requestFrom(RTC_ADDRESS,1); // read only 1 byte (only control register 3)
     byte ctrl_reg3 = Wire.read();
     Wire.endTransmission();
     Serial.println(ctrl_reg3, BIN);
-    if((ctrl_reg3 & 0b11100000) != 0) { // if not in battery switchover
+    if((ctrl_reg3 & 0b11100000) != 0b001) { // if not in direct battery switchover
         Serial.println("changing ctrl_reg3.");
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x2);    //address
-        Wire.write(ctrl_reg3 & 0b00011111);       // value at that address
-        // ctrl_reg3[7:5] becomes 0b101    battery switchover enabled
+        Wire.write(0b00100000);       // direct battery switchover with low battery detection enabled.
         Wire.endTransmission();
     }
     Wire.beginTransmission(RTC_ADDRESS);
