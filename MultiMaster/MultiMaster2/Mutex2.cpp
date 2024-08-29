@@ -19,9 +19,13 @@ byte startMutex() {
         }
         else return 1;  // timed out while trying to arbitrate
     }
-    // Arduino 1 has top priority amongst the I2C masters.
-    // Therefore mutex2&3 aren't checked again.
-    return 0;   // success!
+    // check mutex1&2 one more time (incase another arduino transmits at the same time)
+    delay(5);   // Arduino2 has 2nd priority hence the delay.
+    if(PINB & (1<<PINB1) & (1<<PORTB0)) { // if they are HIGH
+        PORTC = PORTC & 0b11110111; // PC3 set to LOW
+        return 1;   // failed to arbitrate
+    }
+    else return 0;  // succesfully arbitrated for mutex.
 }
 
 void endMutex() {
