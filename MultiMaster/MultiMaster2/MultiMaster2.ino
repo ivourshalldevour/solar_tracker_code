@@ -14,12 +14,12 @@ hd44780_i2Cexp lcd; // global for the hd44780 LCD library
     test multi-master I2C communication arbitered via 3 extra GPIO pins.
 */
 void setup() {
-    DDRB = DDRB & !(1<<DDB0);   // set mutex2 (PB0) as input.
+    DDRB = DDRB & !(1<<DDB1);   // set mutex1 (PB1) as input.
     DDRC = DDRC & !(1<<DDC3);   // set mutex3 (PC3) as input.
 
-    // set mutex 1 (PB1) as output.
-    PORTB = PORTB & !(1<<PORTB1);   // set to output LOW
-    DDRB = DDRB | (1<<DDB1);   // then set as output (avoids accidental HIGH)
+    // set mutex 2 (PB0) as output.
+    PORTB = PORTB & !(1<<PORTB0);   // set to output LOW
+    DDRB = DDRB | (1<<DDB0);   // then set as output (avoids accidental HIGH)
 
     Serial.begin(9600);
     Wire.begin();
