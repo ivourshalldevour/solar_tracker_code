@@ -9,6 +9,7 @@
 #include "SolarServo.hpp"
 #include "ButtonInput.hpp"
 #include "MenuFSM.hpp"
+#include "Mutex1.hpp"
 
 
 #define LCD_COLS 16
@@ -17,8 +18,7 @@
 
     /*  GLOBALS */
 
-hd44780_I2Cexp lcd; // declare lcd object: auto locate & auto config expander chip
-    // we don't give it a specific I2C address because the library auto finds it.
+hd44780_I2Cexp lcd(0x27); // declare lcd object with address
 
 //  Flag set by ISRs, and cleared by main program loop.
 byte rtc_interrupt = 0;         // used to trigger tracker movements.
@@ -35,6 +35,13 @@ void setup() {
     PORTC = PORTC & 0b01100111; // setting PC7, PC4, PC3 (pin7, pin4, pin3)as inputs without pullups.
     DDRC  = DDRC  & 0b01100111;
 
+    // Set the mutex pins as inputs and outputs
+    DDRB = DDRB & !(1<<DDB0);   // set mutex2 (PB0) as input.
+    DDRC = DDRC & !(1<<DDC3);   // set mutex3 (PC3) as input.
+    // set mutex 1 (PB1) as output.
+    PORTB = PORTB & !(1<<PORTB1);   // set to output LOW
+    DDRB = DDRB | (1<<DDB1);   // then set as output (avoids accidental HIGH)
+
     // Enable pin change interrupts on the Cycle, Select, Back buttons.
     PCICR = PCICR | (1 << PCIE2);   // enabling interrupts from pins PD7-PD0.
     PCMSK2 = PCMSK2 | (1<<PCINT23) | (1<<PCINT20) | (1<<PCINT19);   // Masking so only PD7 PD4 & PD3 cause interrupts.
@@ -45,6 +52,8 @@ void setup() {
     PORTD = PORTD | 0b00000100; // enabling pull-up resistor on pin 2.
     EICRA = 1 << ISC01;         // setting interrupt to be triggered on falling edge.
     EIMSK = 1 << INT0;          // enabling external interrupt on pin 2
+
+    startMutex();   // start i2c comms.
 
     // initialise the I2C LCD module.
     int status;
@@ -61,6 +70,7 @@ void setup() {
 
     setupServoTimer();  // also configures pins 5&6 as outputs.
     rtcSetupCountdown(1, RTC_ADDRESS);  // configure rtc to generate interrupts every 2 minutes.
+    endMutex(); // end i2c comms.
 }
 
 
@@ -71,17 +81,34 @@ void loop() {
     if(rtc_interrupt==1) {
         rtc_interrupt = 0;
 
-        // clear the RTC's CTBF flag.
+        // Reading RTC's Control_2 register to determine which Timer caused the interrupt.
+        startMutex();   // start i2c
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x1);    // Control_2 register address
-        Wire.write(0b00000001); // clear all flags & set CTBIE (enables timer B).
+        Wire.endTransmission(false);    // false so I2C line is not released.
+        Wire.requestFrom(RTC_ADDRESS, 1);   // read 1 byte.
+        byte ctrl_reg2 = Wire.read();
         Wire.endTransmission();
+        if( !(ctrl_reg2 & 0b00100000) ) { // if CTBF not raised
+            // ignore this interrupt
+            // caused by something else 
+            // maybe Timer A.
+            endMutex(); // finish i2c comms
+            return; // leave the main loop() function.
+        }
+        // CTBF was raised!
+        // so now we clear CTBF.
+        Wire.beginTransmission(RTC_ADDRESS);
+        Wire.write(0x1);    // Control_2 reg address
+        Wire.write(ctrl_reg2 & 0b11011111);
+        Wire.endTransmission();
+
 
         // get date and time from RTC.
         byte time[7];
         rtcGetTime(time, RTC_ADDRESS);
         rtcConvertTime(time);
-        //Serial.print("rtc_day: "); Serial.println(time[3]); 
+        endMutex(); // finish i2c comms
 
         // Calculate position of sun (LHA and declination).
         // Using algorithm on PVeducation website. https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
@@ -144,7 +171,9 @@ void loop() {
     else if(keyboard_interrupt==1) {
         keyboard_interrupt = 0; // clear flag.
         PCICR = PCICR & (!(1<<PCIE2));  // disable pin change interrupts from any of the CSB buttons.
+        startMutex();   // need this to arbitrate the multi-master i2c port.
         menuFSM();
+        endMutex();
         PCIFR = PCIFR | (1<<PCIF2);   // clear PCINT2 flag by writing one to it.
         PCICR = PCICR | (1<<PCIE2); // enable pin change interrupts from the CSB buttons again.
     }
