@@ -6,7 +6,7 @@ void setup() {
     Wire.begin();   // join i2c as master
 
     // setup the INA219 current meter chip
-    setupPowerMeter(0x40);
+    setupPowerMeter(0x45);
 
     /*
         Notes:
@@ -29,7 +29,7 @@ void loop() {
         // measurements[2] is for power
         int measurements[3] = {0, 0, 0};
         
-        byte status = readPower(measurements, (byte)0x40);
+        byte status = readPower(measurements, (byte)0x45);
         if(status) {
             Serial.println("Error: Power and current overflowed.");
             return; // skip to next iteration of loop()

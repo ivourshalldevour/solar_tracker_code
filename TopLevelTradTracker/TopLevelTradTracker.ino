@@ -103,7 +103,6 @@ void loop() {
         Wire.write(ctrl_reg2 & 0b11011111);
         Wire.endTransmission();
 
-
         // get date and time from RTC.
         byte time[7];
         rtcGetTime(time, RTC_ADDRESS);
@@ -171,9 +170,11 @@ void loop() {
     else if(keyboard_interrupt==1) {
         keyboard_interrupt = 0; // clear flag.
         PCICR = PCICR & (!(1<<PCIE2));  // disable pin change interrupts from any of the CSB buttons.
-        startMutex();   // need this to arbitrate the multi-master i2c port.
+        byte status = startMutex();   // need this to arbitrate the multi-master i2c port.
+        Serial.println(status, BIN);
         menuFSM();
         endMutex();
+
         PCIFR = PCIFR | (1<<PCIF2);   // clear PCINT2 flag by writing one to it.
         PCICR = PCICR | (1<<PCIE2); // enable pin change interrupts from the CSB buttons again.
     }

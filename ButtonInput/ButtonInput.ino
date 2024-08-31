@@ -18,7 +18,7 @@
 #define LCD_COLS 16
 #define LCD_ROWS 2
 
-hd44780_I2Cexp lcd; // declare lcd object: auto locate & auto config expander chip
+hd44780_I2Cexp lcd(0x27); // declare lcd object: auto locate & auto config expander chip
     // we don't give it a specific I2C address because the library auto finds it.
 
 byte c_count = 0;  // no. times this button was pressed.
