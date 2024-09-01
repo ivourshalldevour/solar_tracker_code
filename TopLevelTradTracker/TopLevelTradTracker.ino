@@ -82,7 +82,9 @@ void loop() {
         rtc_interrupt = 0;
 
         // Reading RTC's Control_2 register to determine which Timer caused the interrupt.
-        startMutex();   // start i2c
+        byte status = startMutex();   // start i2c
+        Serial.println(status, BIN);
+        if (status) {return;}   // arbitration was not successful.
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x1);    // Control_2 register address
         Wire.endTransmission(false);    // false so I2C line is not released.
@@ -172,6 +174,7 @@ void loop() {
         PCICR = PCICR & (!(1<<PCIE2));  // disable pin change interrupts from any of the CSB buttons.
         byte status = startMutex();   // need this to arbitrate the multi-master i2c port.
         Serial.println(status, BIN);
+        if(status) {return;}    // arbitration was not successful.
         menuFSM();
         endMutex();
 

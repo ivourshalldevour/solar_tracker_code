@@ -20,7 +20,7 @@ byte startMutex() {
         else return 1;  // timed out while trying to arbitrate
     }
     // check mutex1&3 one more time (incase another arduino transmits at the same time)
-    delay(5);   // Arduino2 has 2nd priority hence the delay.
+    delay(2);   // Arduino2 has 2nd priority hence the delay.
     if( (PINB & (1<<PINB1)) | (PINC & (1<<PINC3)) ) { // if they are HIGH
         PORTC = PORTB & 0b11111110; // PB0 (mutex2) set to LOW
         return 1;   // failed to arbitrate
