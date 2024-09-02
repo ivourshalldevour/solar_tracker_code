@@ -90,7 +90,7 @@ void loop() {
         rtc_interrupt = 0;
         // Read RTC's control_2 register to determine if Timer A or B timed-out
         byte status = startMutex();   // start i2c comms.
-        if(status) {Serial.println(status,BIN); return;}    // arbitration failed.
+        if(status) {return;}    // arbitration failed.
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x1);    // Control_2 register address
         Wire.endTransmission(false);    // false so I2C line is not released.
@@ -102,7 +102,6 @@ void loop() {
             // caused by something else 
             // maybe Timer B.
             endMutex(); // finish i2c comms
-            Serial.println("CTAF was not raised....");
             return; // leave the main loop() function.
         }
         // CTAF was raised!

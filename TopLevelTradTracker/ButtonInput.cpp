@@ -1,7 +1,7 @@
 #include "ButtonInput.hpp"
 
 // defined in main .ino file
-extern byte keyboard_interrupt;
+extern volatile byte keyboard_interrupt;
 
 Button readButtons() {
     byte c_current = digitalRead(3);

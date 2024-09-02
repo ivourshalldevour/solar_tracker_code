@@ -5,16 +5,16 @@
     // If not,  put it in battery switchover mode.
     Wire.beginTransmission(RTC_ADDRESS);
     Wire.write(0x2); // address of control register 3
-    Wire.endTransmission(false);    // false so line is not released.
     Wire.requestFrom(RTC_ADDRESS,1); // read only 1 byte (only control register 3)
     byte ctrl_reg3 = Wire.read();
     Wire.endTransmission();
     Serial.println(ctrl_reg3, BIN);
-    if((ctrl_reg3 & 0b11100000) != 0b001) { // if not in direct battery switchover
+    if((ctrl_reg3 & 0b11100000) != 0) { // if not in battery switchover
         Serial.println("changing ctrl_reg3.");
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x2);    //address
-        Wire.write(0b00100000);       // direct battery switchover with low battery detection enabled.
+        Wire.write(ctrl_reg3 & 0b00011111);       // value at that address
+        // ctrl_reg3[7:5] becomes 0b101    battery switchover enabled
         Wire.endTransmission();
     }
     Wire.beginTransmission(RTC_ADDRESS);
@@ -27,10 +27,11 @@
 
 
 // defined in main .ino file
-extern byte rtc_interrupt;
+extern volatile byte rtc_interrupt;
 
 
 ISR(INT0_vect) {
+    // check for Timer A and Timer B in main code.
     rtc_interrupt = 1;
 }
 
@@ -59,11 +60,20 @@ byte rtcCheckClock(int address) {
 }
 
 
-void rtcSetupCountdown(byte interval, int rtc_address) {
+void rtcSetupCountdown(byte intervalA, byte intervalB, int rtc_address) {
+    // If a zero is inputted as the interval
+    // that timer should be disabled.
+    byte enA = 0;
+    byte enB = 0;
+    if(intervalA==0) {enA = 0;} // only enable timers if they are given a positive interval.
+    else {enA = 1;}
+    if(intervalB==0) {enB=0;}
+    else {enB = 1;}
+
     // Write to Control_2 register
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x1);    // address of Control_2
-        Wire.write(0b00000001);   // Set CTBIE=1 to enable countdown timer B interrupts. Also clear all flags.
+        Wire.write(0b0 | (enA << 1) | (enB));   // Set CTAIE=CTBIE=1 to enable countdown timer B&A interrupts. Also clear all flags.
         Wire.endTransmission();
     // Write to Tmr_B_Freq_ctrl register & load value into T_B.
         Wire.beginTransmission(RTC_ADDRESS);
@@ -71,17 +81,27 @@ void rtcSetupCountdown(byte interval, int rtc_address) {
         Wire.write(0b00000011);
         // TBW don't care. Arduino interrupts set to trigger on falling edge not level, so pulse width doesn't matter.
         // TBQ = 0b011 for counting minutes.
-        Wire.write(interval);   // Load number of minutes into T_B.
+        Wire.write(intervalB);   // Load number of minutes into T_B.
+        Wire.endTransmission();
+    // Write to Tmr_A_Freq_ctrl, T_A, Tmr_B_Freq_ctrl and T_B
+        Wire.beginTransmission(RTC_ADDRESS);
+        Wire.write(0x10);   // address of Tmr_A_Freq_ctrl
+        Wire.write(0b00000011); // Tmr_A_Freq_ctrl value (TAQ = 0b011 for counting mins).
+        Wire.write(intervalA);   // Load number of minutes into T_A.
+        Wire.write(0b00000011); // Tmr_B_Freq_ctrl value  // TBW don't care. Arduino interrupts set to trigger on falling edge not level, so pulse width doesn't matter. // TBQ = 0b011 for counting minutes.
+        Wire.write(intervalB);  // Load number of minutes into T_B.
         Wire.endTransmission();
     // Write to Tmr_CLKOUT_ctrl register
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x0F);   // address of Tmr_CLKOUT_ctrl
-        Wire.write(0b00111001);
+        Wire.write(0b00111000 | (enA << 1) | (enB));
         // set permanent active interrupt (TAM bit)
         // set permanent active interrupt (TBM bit)
         // disable CLKOUT generation (COF bits)
-        // disable timer A (TAC bits)
-        // enable timer B (TBC bit)
+        
+        // Based upon enA and enB from before:
+        // enable/disable timer A (TAC bits)
+        // enable/disable timer B (TBC bit)
         Wire.endTransmission();
 }
 

@@ -21,8 +21,8 @@
 hd44780_I2Cexp lcd(0x27); // declare lcd object with address
 
 //  Flag set by ISRs, and cleared by main program loop.
-byte rtc_interrupt = 0;         // used to trigger tracker movements.
-byte keyboard_interrupt = 0;    // used to enter MenuFSM function.
+byte volatile rtc_interrupt = 0;         // used to trigger tracker movements.
+byte volatile keyboard_interrupt = 0;    // used to enter MenuFSM function.
 
 
     /* Setup the microcontroller    */
@@ -69,7 +69,7 @@ void setup() {
     }
 
     setupServoTimer();  // also configures pins 5&6 as outputs.
-    rtcSetupCountdown(1, RTC_ADDRESS);  // configure rtc to generate interrupts every 2 minutes.
+    rtcSetupCountdown(1, 0, RTC_ADDRESS);  // Timer B disabled. Timer A causes RTC INT every 1 min.
     endMutex(); // end i2c comms.
 }
 
@@ -83,7 +83,6 @@ void loop() {
 
         // Reading RTC's Control_2 register to determine which Timer caused the interrupt.
         byte status = startMutex();   // start i2c
-        Serial.println(status, BIN);
         if (status) {return;}   // arbitration was not successful.
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x1);    // Control_2 register address
@@ -95,11 +94,13 @@ void loop() {
             // ignore this interrupt
             // caused by something else 
             // maybe Timer A.
+            Serial.println("CTBF not raised...");
             endMutex(); // finish i2c comms
             return; // leave the main loop() function.
         }
         // CTBF was raised!
         // so now we clear CTBF.
+        Serial.println("CTBF RAISED!");
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x1);    // Control_2 reg address
         Wire.write(ctrl_reg2 & 0b11011111);
@@ -173,7 +174,6 @@ void loop() {
         keyboard_interrupt = 0; // clear flag.
         PCICR = PCICR & (!(1<<PCIE2));  // disable pin change interrupts from any of the CSB buttons.
         byte status = startMutex();   // need this to arbitrate the multi-master i2c port.
-        Serial.println(status, BIN);
         if(status) {return;}    // arbitration was not successful.
         menuFSM();
         endMutex();

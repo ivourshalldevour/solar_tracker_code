@@ -13,19 +13,22 @@ byte rtcCheckClock(int address);
 
 
 /*
-    Function that setups up the countdown timer B on the PCF8523 real time
+    Function that sets up the countdown Timer A and B on the PCF8523 real time
     clock to generate interrupts on its INT1 pin. This is an active LOW
     interrupt. The countdown timer B is set to count down the number of
-    minutes given by interval.
+    minutes given by intervalB. While timer A is set to count down the number
+    of minutes given by intervalA
     Input:
-        - interval: number of minutes between each interrupt signal.
+        - intervalB: number of minutes between each interrupt from Timer B
+        - intervalA: number of minutes between each interrupt from Timer A
+        - If the interval is given as 0, that timer is disabled. 
     Output:
         - Writes to I2C to setup the RTCs registers to start the timer.
     Assumes:
         - The interrupt needs to be cleared via I2C in a different function
         to disable the interrupt.
 */
-void rtcSetupCountdown(byte interval, int rtc_address);
+void rtcSetupCountdown(byte intervalA, byte intervalB, int rtc_address);
 
 int julianDay(byte* time);
 
