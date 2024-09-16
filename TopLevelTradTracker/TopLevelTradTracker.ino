@@ -28,7 +28,7 @@ byte volatile keyboard_interrupt = 0;    // used to enter MenuFSM function.
     /* Setup the microcontroller    */
 
 void setup() {
-    Serial.begin(9600); // open the serial port at 9600 bps:
+    Serial.begin(115200); // open the serial port at 115200 bps:
     Wire.begin();       // join I2C bus as master
 
     // Set these pins as inputs for the Cycle, Select, Back buttons.
@@ -69,7 +69,7 @@ void setup() {
     }
 
     setupServoTimer();  // also configures pins 5&6 as outputs.
-    rtcSetupCountdown(1, 0, RTC_ADDRESS);  // Timer B disabled. Timer A causes RTC INT every 1 min.
+    rtcSetupCountdown(1, 1, RTC_ADDRESS);   // also clears CTAF and CTBF
     endMutex(); // end i2c comms.
 }
 
@@ -83,7 +83,10 @@ void loop() {
 
         // Reading RTC's Control_2 register to determine which Timer caused the interrupt.
         byte status = startMutex();   // start i2c
-        if (status) {return;}   // arbitration was not successful.
+        Serial.println(status,BIN);
+        if (status) {Serial.println("startMutex failed...");return;}   // arbitration was not successful.
+        Serial.println("startMutex() success!");
+
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x1);    // Control_2 register address
         Wire.endTransmission(false);    // false so I2C line is not released.
@@ -94,13 +97,11 @@ void loop() {
             // ignore this interrupt
             // caused by something else 
             // maybe Timer A.
-            Serial.println("CTBF not raised...");
             endMutex(); // finish i2c comms
             return; // leave the main loop() function.
         }
         // CTBF was raised!
         // so now we clear CTBF.
-        Serial.println("CTBF RAISED!");
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x1);    // Control_2 reg address
         Wire.write(ctrl_reg2 & 0b11011111);
@@ -150,7 +151,7 @@ void loop() {
             // calculate sunrise time.
             // set alarm for this sunrise time.
             // goto sleep.
-            Serial.print("Sun below horizon.");
+            Serial.println("Sun below horizon.");
             return;
         }
 

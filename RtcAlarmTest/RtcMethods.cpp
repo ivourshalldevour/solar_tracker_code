@@ -75,14 +75,6 @@ void rtcSetupCountdown(byte intervalA, byte intervalB, int rtc_address) {
         Wire.write(0x1);    // address of Control_2
         Wire.write(0b0 | (enA << 1) | (enB));   // Set CTAIE=CTBIE=1 to enable countdown timer B&A interrupts. Also clear all flags.
         Wire.endTransmission();
-    // Write to Tmr_B_Freq_ctrl register & load value into T_B.
-        Wire.beginTransmission(RTC_ADDRESS);
-        Wire.write(0x12);   // address of Tmr_B_Freq_ctrl
-        Wire.write(0b00000011);
-        // TBW don't care. Arduino interrupts set to trigger on falling edge not level, so pulse width doesn't matter.
-        // TBQ = 0b011 for counting minutes.
-        Wire.write(intervalB);   // Load number of minutes into T_B.
-        Wire.endTransmission();
     // Write to Tmr_A_Freq_ctrl, T_A, Tmr_B_Freq_ctrl and T_B
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x10);   // address of Tmr_A_Freq_ctrl

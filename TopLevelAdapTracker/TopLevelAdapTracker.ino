@@ -35,7 +35,7 @@ byte keyboard_interrupt = 0;    // used to enter MenuFSM function.
 
 
 void setup() {
-    Serial.begin(9600); // open the serial port at 9600 bps:
+    Serial.begin(115200); // open the serial port at 9600 bps:
     Wire.begin();       // join I2C bus as master
 
     // Set these pins as inputs for the Cycle, Select, Back buttons.

@@ -8,7 +8,7 @@
 byte rtc_interrupt = 0;
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
     Wire.begin();
 
     // Set pin 2 (INT0) to be external interrupt from RTC
@@ -91,6 +91,7 @@ void loop() {
         // Read RTC's control_2 register to determine if Timer A or B timed-out
         byte status = startMutex();   // start i2c comms.
         if(status) {return;}    // arbitration failed.
+
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x1);    // Control_2 register address
         Wire.endTransmission(false);    // false so I2C line is not released.
@@ -111,31 +112,55 @@ void loop() {
         Wire.write(ctrl_reg2 & 0b10111111);
         Wire.endTransmission();
         
-        
+        Serial.println("Logging...");
+
+        int measurements[3] = {0, 0, 0};
+        char str[9];
+
         // get date and time from RTC.
         byte time[7];
         rtcGetTime(time, RTC_ADDRESS);
         rtcConvertTime(time);
         endMutex(); // finish i2c comms
 
-        Serial.println("Datalogger triggered. CTAF was raised!");
-        /*
         // Now read the power level.
-        int measurements[3] = {0, 0, 0};
         readPower(measurements, 0x41);
 
         // open the logging file
         File file = SD.open("test.txt", FILE_WRITE);    // might need to be FILE_APPEND
         file.print(1); file.print(',');                 // panel num
-        file.print(time[2]); file.print(':');           // hours
-        file.print(time[1]); file.print(':');           // minutes
-        file.print(time[0]); file.print(',');           // seconds
-        file.print(time[3]); file.print('/');           // day
-        file.print(time[5]); file.print('/');           // month
-        file.print(time[6]); file.print(',');           // year
+        sprintf(str, "%02d:%02d:%02d", time[2], time[1], time[0]);  
+        file.print(str); file.print(',');               // print time (hh:mm:ss)
+        sprintf(str, "%02d/%02d/%02d", time[3], time[5], time[6]);  
+        file.print(str); file.print(',');           // print date (dd/mm/yy)
         file.print(measurements[0]); file.print(',');   // bus voltage (mV)
         file.print(measurements[1]); file.print(',');   // current  (mA)
         file.println(measurements[2]);                  // power (mW)
-        file.close();*/
+        file.close();
+
+        // Repeat for other power meters.
+        readPower(measurements, 0x44);
+        file = SD.open("test.txt", FILE_WRITE);    // might need to be FILE_APPEND
+        file.print(2); file.print(',');                 // panel num
+        sprintf(str, "%02d:%02d:%02d", time[2], time[1], time[0]);  
+        file.print(str); file.print(',');               // print time (hh:mm:ss)
+        sprintf(str, "%02d/%02d/%02d", time[3], time[5], time[6]);  
+        file.print(str); file.print(',');           // print date (dd/mm/yy)
+        file.print(measurements[0]); file.print(',');   // bus voltage (mV)
+        file.print(measurements[1]); file.print(',');   // current  (mA)
+        file.println(measurements[2]);                  // power (mW)
+        file.close();
+
+        readPower(measurements, 0x45);
+        file = SD.open("test.txt", FILE_WRITE);    // might need to be FILE_APPEND
+        file.print(3); file.print(',');                 // panel num
+        sprintf(str, "%02d:%02d:%02d", time[2], time[1], time[0]);  
+        file.print(str); file.print(',');               // print time (hh:mm:ss)
+        sprintf(str, "%02d/%02d/%02d", time[3], time[5], time[6]);  
+        file.print(str); file.print(',');           // print date (dd/mm/yy)
+        file.print(measurements[0]); file.print(',');   // bus voltage (mV)
+        file.print(measurements[1]); file.print(',');   // current  (mA)
+        file.println(measurements[2]);                  // power (mW)
+        file.close();
     }
 }
