@@ -26,4 +26,10 @@ void setupServoTimer();
 // Angle is +-90 degrees. 0 is neutral (PV panel horizontal).
 void commandServo(byte servo_num, int8_t angle);
 
+/*
+    Does the same thing as commandServo() just moves to the final angle slowly
+    so that no excessive stress is put into the mechanism.
+*/
+void slowServo(byte servo_num, int8_t startAngle, int8_t targetAngle);
+
 #endif

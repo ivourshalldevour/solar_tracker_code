@@ -76,6 +76,7 @@ void setup() {
 
 void loop() {
 // ignoring RtcInterrupt in the Adaptive tracker for now.
+// remember to limit adaptive tracker's declination servo (servo 0) to only +-80 degrees. So it doesnt hit post.
 
 /*if(rtc_interrupt==1) {
         rtc_interrupt = 0;

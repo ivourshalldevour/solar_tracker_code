@@ -2,7 +2,7 @@
 
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
 
     setupServoTimer();
 
@@ -21,15 +21,28 @@ void setup() {
 }
 
 void loop() {
+    /*
     commandServo(0, 0);
     delay(10);
     commandServo(1, 0);
     Serial.println("0 degrees.");
     delay(4000);
-    commandServo(0, 45);
+    commandServo(0, 0);
     delay(10);
-    commandServo(1, 45);
-    Serial.println("45 degrees.");
+    commandServo(1, 00);
+    Serial.println("00 degrees.");
+    delay(4000);
+    */
+
+    // Slow servo movements
+    slowServo(0, 0, -80);
+    delay(10);
+    commandServo(1, 90);
+    delay(4000);
+
+    slowServo(0, -80, 0);
+    delay(10);
+    commandServo(1, 0);
     delay(4000);
 }
 
