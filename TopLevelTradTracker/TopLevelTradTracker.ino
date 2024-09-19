@@ -23,6 +23,7 @@ hd44780_I2Cexp lcd(0x27); // declare lcd object with address
 //  Flag set by ISRs, and cleared by main program loop.
 byte volatile rtc_interrupt = 0;         // used to trigger tracker movements.
 byte volatile keyboard_interrupt = 0;    // used to enter MenuFSM function.
+int8_t volatile current_angle = 0;  // used to remember where the declination servo is.
 
 
     /* Setup the microcontroller    */
@@ -68,9 +69,17 @@ void setup() {
         Serial.println("Bad clock.");
     }
 
-    setupServoTimer();  // also configures pins 5&6 as outputs.
     rtcSetupCountdown(1, 1, RTC_ADDRESS);   // also clears CTAF and CTBF
     endMutex(); // end i2c comms.
+
+    setupServoTimer();  // also configures pins 5&6 as outputs.
+    // Move servos to home (0,0)
+    commandServo(0, 0);
+    delay(10);
+    commandServo(1, 0);
+    delay(5000);    // Wait 5 seconds so I can physically align the
+                    // mechanism if there was any slip during homing.
+    current_angle = 0;
 }
 
 
@@ -80,12 +89,11 @@ void setup() {
 void loop() {
     if(rtc_interrupt==1) {
         rtc_interrupt = 0;
+        Serial.println("Ard1: RTC_INT triggered.");
 
         // Reading RTC's Control_2 register to determine which Timer caused the interrupt.
         byte status = startMutex();   // start i2c
-        Serial.println(status,BIN);
-        if (status) {Serial.println("startMutex failed...");return;}   // arbitration was not successful.
-        Serial.println("startMutex() success!");
+        if (status) {return;}   // arbitration was not successful.
 
         Wire.beginTransmission(RTC_ADDRESS);
         Wire.write(0x1);    // Control_2 register address
@@ -94,12 +102,14 @@ void loop() {
         byte ctrl_reg2 = Wire.read();
         Wire.endTransmission();
         if( !(ctrl_reg2 & 0b00100000) ) { // if CTBF not raised
+            Serial.println("Ard1: CTBF was not raised...");
             // ignore this interrupt
             // caused by something else 
             // maybe Timer A.
             endMutex(); // finish i2c comms
             return; // leave the main loop() function.
         }
+        Serial.println("Ard1: CTBF was raised!");
         // CTBF was raised!
         // so now we clear CTBF.
         Wire.beginTransmission(RTC_ADDRESS);
@@ -167,7 +177,7 @@ void loop() {
         Serial.print("theta1: "); Serial.println((int8_t)theta1);
 
         // moving servos
-        commandServo(0, (int8_t)theta0);
+        slowServo(0, -(int8_t)theta0);   // moves slowly to avoid slip in mechanism
         delay(20);
         commandServo(1, (int8_t)theta1);
     }

@@ -33,11 +33,9 @@ byte startMutex() {
     // Try to broadcast
     while(1) {  // will keep trying forever.
         if((PINB & (1<<PINB0)) | (PINC & (1<<PINC3))) { // while mutex2 or 3 is HIGH
-            Serial.println("Mutex2or3 high.");
         }
         else {  // if mutex 2&3 are LOW
             PORTB = PORTB | (1<<PORTB1);    // output HIGH on mutex1
-            Serial.println("Output high on mutex1.");
             break;
         }
     }

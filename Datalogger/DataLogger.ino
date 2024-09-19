@@ -29,6 +29,7 @@ void setup() {
     setupPowerMeter(0x45);
     endMutex();
 
+    // SD.begin(10);
     Serial.print("Initializing SD card...");
     if (!SD.begin(10)) {  // 10 is Chip Select pin.
         Serial.println("Initialisation failed");
@@ -44,45 +45,6 @@ void setup() {
     unsigned int last_secs = 1;
     int measurements[3] = {0,0,0};
     char str[9] = {0,0,0,0,0,0,0,0,0};
-    /*
-    byte i = 1;
-    // do this once every second
-    while(true) {
-        secs = millis() / 1000;
-        if(secs != last_secs) {
-            last_secs = secs;   // keep track of last value.
-            
-            // this is executed once each second. for 30s max
-                    // get date and time from RTC.
-            startMutex();
-            byte time[7];
-            rtcGetTime(time, RTC_ADDRESS);
-            rtcConvertTime(time);
-
-            // Now read the power level.
-            readPower(measurements, 0x41);
-            endMutex();
-
-            // open the logging file
-            File file = SD.open("test.txt", FILE_WRITE);    // might need to be FILE_APPEND
-            file.print(1); file.print(',');                 // panel num
-            sprintf(str, "%02d:%02d:%02d", time[2], time[1], time[0]);  // print time (hh:mm:ss)
-            file.print(str); file.print(',');
-            sprintf(str, "%02d/%02d/%02d", time[3], time[5], time[6]);  // print date (dd/mm/yy)
-            file.print(str); file.print(',');
-            file.print(measurements[0]); file.print(',');   // bus voltage (mV)
-            file.print(measurements[1]); file.print(',');   // current  (mA)
-            file.println(measurements[2]);                  // power (mW)
-            file.close();
-                    
-            Serial.println(i);
-            i++;
-        }
-        if(i > 10) {
-            break;
-        }
-    }
-    Serial.println("Done logging.");*/
 }
 
 void loop() {
@@ -121,7 +83,6 @@ void loop() {
         byte time[7];
         rtcGetTime(time, RTC_ADDRESS);
         rtcConvertTime(time);
-        endMutex(); // finish i2c comms
 
         // Now read the power level.
         readPower(measurements, 0x41);
@@ -162,5 +123,7 @@ void loop() {
         file.print(measurements[1]); file.print(',');   // current  (mA)
         file.println(measurements[2]);                  // power (mW)
         file.close();
+
+        endMutex(); // finish i2c comms
     }
 }

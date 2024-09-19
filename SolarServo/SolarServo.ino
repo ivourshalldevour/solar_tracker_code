@@ -1,5 +1,6 @@
 #include "SolarServo.hpp"
 
+int8_t current_angle = 0;   // stores position of declination servo.
 
 void setup() {
     Serial.begin(115200);
@@ -35,12 +36,12 @@ void loop() {
     */
 
     // Slow servo movements
-    slowServo(0, 0, -80);
+    slowServo(0, -80);
     delay(10);
     commandServo(1, 90);
     delay(4000);
 
-    slowServo(0, -80, 0);
+    slowServo(0, 0);
     delay(10);
     commandServo(1, 0);
     delay(4000);
