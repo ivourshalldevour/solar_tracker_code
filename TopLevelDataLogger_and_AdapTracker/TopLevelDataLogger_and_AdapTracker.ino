@@ -80,12 +80,10 @@ void setup() {
 
 
     // SD.begin(10);
-    Serial.print("Initializing SD card...");
     if (!SD.begin(10)) {  // 10 is Chip Select pin.
-        Serial.println("Initialisation failed");
-        while(true);    // stay here
+        Serial.println("SDcard init failed...");
+        while(true);    // stay here if no SD card was detected.
     }
-    Serial.println("Done.");
 
 
     setupServoTimer();  // also configures pins 5&6 as outputs.
@@ -99,16 +97,13 @@ void setup() {
 }
 
 void loop() {
-// ignoring RtcInterrupt in the Adaptive tracker for now.
-// remember to limit adaptive tracker's declination servo (servo 0) to only +-80 degrees. So it doesnt hit post.
-
 if(rtc_interrupt==1) {
         rtc_interrupt = 0;
         Serial.println("Ard2: RTC_INT triggered");
 
         // start i2c comms.
         byte status = startMutex();
-        if(status) {return;}    // arbitration failed.
+        if(status) {Serial.println("Arbitration failed.");return;}    // arbitration failed.
 
         // Read RTC's control_2 register to determine if Timer A or B timed-out
         Wire.beginTransmission(RTC_ADDRESS);
@@ -140,16 +135,13 @@ if(rtc_interrupt==1) {
 
             {   // scoping bracket to remove intermediate variables from stack once calculations are done.
 
-            // Move to direct position of sun
-
+            // Calculate position of sun (LHA and declination).
+            // Using algorithm on PVeducation website. https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
 
             // get date and time from RTC.
             byte time[7];
             rtcGetTime(time, RTC_ADDRESS);
             rtcConvertTime(time);
-
-            // Calculate position of sun (LHA and declination).
-            // Using algorithm on PVeducation website. https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
 
             // Calculate Local Hour Angle (LHA).
             float longitude;
@@ -169,19 +161,16 @@ if(rtc_interrupt==1) {
             float latitude;
             latitude = EEPROM.get(LAT_EEPROM_ADDRESS, latitude);
             float elev = asin(sin(declination*(PI/180.0)) * sin(latitude*(PI/180.0)) + cos(declination*(PI/180.0)) * cos(latitude*(PI/180.0)) * cos(LHA*(PI/180.0)) );
-            Serial.print("elev: "); Serial.println(elev*(180.0/PI));
+            // Serial.print("elev: "); Serial.println(elev*(180.0/PI));
             if(elev < 0 ) { // if sun below horizon
-                // stop timer B (set TBC=0 in Tmr_CLKOUT_ctrl register).
-                // calculate sunrise time.
-                // set alarm for this sunrise time.
-                // goto sleep.
-                Serial.println("Not logging. Sun below horizon.");
+                endMutex();
+                Serial.println("Sun below hori");
                 return; // don't log data if sun below horizon.
             }
 
             // calculate azimuth angle  (0 at South. +90 at West, -90 at East, ranges -180 to +180)
             float azi = atan2(sin(LHA*(PI/180.0)), cos(LHA*(PI/180.0))*sin(latitude*(PI/180.0)) - tan(declination*(PI/180.0))*cos(latitude*(PI/180.0)) );
-            Serial.print("azi: "); Serial.println(azi*(180.0/PI));
+            // Serial.print("azi: "); Serial.println(azi*(180.0/PI));
 
             // calculate solar tracker axes angles
             // these formulas won't be valid if sun is below horizon
@@ -193,21 +182,28 @@ if(rtc_interrupt==1) {
 
 
             // moving servos
+            Serial.println("Mov2 dir pos");
+            Serial.print("Current angle:"); Serial.println(current_angle);
             slowServo(0, (int8_t)direct_theta0);   // moves slowly to avoid slip in mechanism
+            Serial.print("Current angle:"); Serial.println(current_angle);
             delay(20);
             commandServo(1, (int8_t)direct_theta1);
 
             // measure power at the actual location of the sun
-            readPower(direct_power, 0x44);
-            Serial.print("Direct power:"); Serial.println(direct_power);
+            readPower(&direct_power, 0x44);
+            Serial.print("Direct P:"); Serial.println(direct_power);
 
             // now search power through a cross shape
+            Serial.println("theta0 cross-search.");
             {   // scoping bracket to remove intermediate measurements from stack once done searching.
             int theta_powers[7];  // power measurements while moving through an axis
 
             // first measure through theta0
+            commandServo(1, 0); // making panel flat in LHA axis (theta1).
+            delay(500);
             byte i = 0; // indexes measurements
-            for(byte angle=-90; angle<90; angle+=30) {
+            for(int8_t angle=-90; angle<=90; angle+=30) {
+                Serial.print("Angle: "); Serial.println(angle);
                 slowServo(0, angle);
                 readPower(&(theta_powers[i]), 0x44);
                 i++;
@@ -226,13 +222,17 @@ if(rtc_interrupt==1) {
             max_theta0 = (int)-90 + (int)(max_i  *(int)30);
 
             // move to max_theta0
+            Serial.print("Mov2 max_theta0:"); Serial.println(max_theta0);
             slowServo(0, max_theta0);
+            // LHA axis (theta1) is still flat.
 
             // now measure through theta1
+            Serial.println("theta1 cross-search");
             i = 0; // indexes measurements
-            for(byte angle=-90; angle<90; angle+=30) {
+            for(int8_t angle=-90; angle<=90; angle+=30) {
+                Serial.print("Angle: "); Serial.println(angle);
                 commandServo(1, angle);
-                delay(500);
+                delay(2000);
                 readPower(&(theta_powers[i]), 0x44);
                 i++;
             }
@@ -249,23 +249,24 @@ if(rtc_interrupt==1) {
             }
             if(max_power > direct_power) {  // if this searched location has more power than direct position
                 max_theta1 =  (int)-90 + (int)(max_i  *(int)30);
-                Serial.println("Max power found at cross-searched position.");
+                Serial.println("Max P at X pos.");
             }
             else { // if direct position has more power
                 max_theta0 = direct_theta0;
                 max_theta1 = direct_theta1;
-                Serial.println("Max power found at direct position.");
+                Serial.println("Max P at direct pos");
             }
             }
-            
+
 
             }   // stack scoping bracket to remove all temporary variables within search routine.
 
             // move to position of max power
+            Serial.println("mov2 final pos");
             slowServo(0, max_theta0);
             commandServo(1, max_theta1);
             delay(500);
-            Serial.println("Movements done.");
+            Serial.println("mov done");
 
             //////      Tracker movements done      ///////////
 
@@ -288,7 +289,7 @@ if(rtc_interrupt==1) {
             readPVI(log_measurements, 0x41);
 
             // open the logging file
-            File file = SD.open("test.txt", FILE_WRITE);    // might need to be FILE_APPEND
+            File file = SD.open("datalog.txt", FILE_WRITE);    // might need to be FILE_APPEND
             file.print(1); file.print(',');                 // panel num
             sprintf(str, "%02d:%02d:%02d", time[2], time[1], time[0]);  
             file.print(str); file.print(',');               // print time (hh:mm:ss)
@@ -302,7 +303,7 @@ if(rtc_interrupt==1) {
 
             // Repeat for other power meters.
             readPVI(log_measurements, 0x44);
-            file = SD.open("test.txt", FILE_WRITE);    // might need to be FILE_APPEND
+            file = SD.open("datalog.txt", FILE_WRITE);    // might need to be FILE_APPEND
             file.print(2); file.print(',');                 // panel num
             sprintf(str, "%02d:%02d:%02d", time[2], time[1], time[0]);  
             file.print(str); file.print(',');               // print time (hh:mm:ss)
@@ -316,7 +317,7 @@ if(rtc_interrupt==1) {
             file.close();
 
             readPVI(log_measurements, 0x45);
-            file = SD.open("test.txt", FILE_WRITE);    // might need to be FILE_APPEND
+            file = SD.open("datalog.txt", FILE_WRITE);    // might need to be FILE_APPEND
             file.print(3); file.print(',');                 // panel num
             sprintf(str, "%02d:%02d:%02d", time[2], time[1], time[0]);  
             file.print(str); file.print(',');               // print time (hh:mm:ss)
@@ -327,8 +328,8 @@ if(rtc_interrupt==1) {
             file.print(log_measurements[2]); file.print(','); // power (mW)
             file.println(','); // the missing values for theta0 and theta1
             file.close();
+            Serial.println("Log done");
         }
-        Serial.println("Logging done.");
 
         endMutex(); // finish i2c comms
 }

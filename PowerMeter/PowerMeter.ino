@@ -2,11 +2,11 @@
 #include "PowerMeter.hpp"
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
     Wire.begin();   // join i2c as master
 
     // setup the INA219 current meter chip
-    setupPowerMeter(0x45);
+    setupPowerMeter(0x44);
 
     /*
         Notes:
@@ -28,13 +28,16 @@ void loop() {
         // measurements[1] is for current
         // measurements[2] is for power
         int measurements[3] = {0, 0, 0};
+        // int power = 0;
+
         
-        byte status = readPower(measurements, (byte)0x45);
+        byte status = readPVI(measurements, (byte)0x44);
         if(status) {
             Serial.println("Error: Power and current overflowed.");
             return; // skip to next iteration of loop()
         }
         
+        // Serial.println(power, DEC);
         Serial.print("V_Bus   (mV): ");
         Serial.println(measurements[0]);
         Serial.print("Current (mA): ");

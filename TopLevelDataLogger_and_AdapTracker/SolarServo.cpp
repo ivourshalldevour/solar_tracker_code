@@ -71,13 +71,3 @@ void slowServo(byte servo_num, int8_t target_angle) {
     // once reached target angle
     current_angle = target_angle;
 }
-
-// IDEA!!!
-    // Use OCR1A to generate pulses for declination servo
-    // Use OCR1B to generate pulses for hour angle servo.
-    // Two sepparate interrupts. One is triggered by OCR1B. Set hour angle pin to output 0.
-    // The other interrupt is triggered by OCR1A. Set declination pin to output 0.
-    // Unfortunately this means we have two interrupts doign ALMOST the exact same thing.
-    // Perhaps it uses less memory to use just one interrupt that sets both pins to zero.
-
-

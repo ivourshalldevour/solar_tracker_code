@@ -19,7 +19,13 @@
     - measurements[1] is current in mA
     - measurements[2] is power in mW
 */
-byte readPower(int* measurements, byte i2c_address);
+byte readPVI(int* measurements, byte i2c_address);
+
+/*
+    Does the same as readMeasurements() but only returns power instead
+    of current and voltage aswell.
+*/
+byte readPower(int* power, byte i2c_address);
 
 
 /*
