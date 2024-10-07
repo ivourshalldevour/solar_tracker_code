@@ -188,7 +188,8 @@ if(rtc_interrupt==1) {
             Serial.print("Current angle:"); Serial.println(current_angle);
             delay(20);
             commandServo(1, (int8_t)direct_theta1);
-
+            delay(1000);
+            
             // measure power at the actual location of the sun
             readPower(&direct_power, 0x44);
             Serial.print("Direct P:"); Serial.println(direct_power);
