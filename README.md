@@ -1,0 +1,1 @@
+This repo holds all the code used during my honours year Bachelor of Engineering (Mechatronic) thesis project at the University of Sydney. The final project succeeded in controlling two solar trackers, and comparing their power outputs against a fixed solar panel.
